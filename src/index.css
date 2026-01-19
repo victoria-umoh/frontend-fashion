@@ -11,3 +11,23 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.transition-all {
+  transition: all 0.3s ease-in-out;
+}
+
+.nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff !important;
+}
+
+.tracking-widest {
+  letter-spacing: 0.1em;
+}
+
+/* Ensure the sidebar stays fixed while content scrolls */
+.min-vh-100 {
+  position: sticky;
+  top: 0;
+}
+

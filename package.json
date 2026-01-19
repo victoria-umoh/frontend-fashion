@@ -2,14 +2,29 @@
   "name": "frontend-fashion",
   "version": "0.1.0",
   "private": true,
+  "proxy": "http://localhost:5000",
   "dependencies": {
+    "@paypal/react-paypal-js": "^8.9.2",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.13.2",
+    "bootstrap": "^5.3.8",
     "react": "^19.2.3",
+    "react-bootstrap": "^2.10.10",
+    "react-bootstrap-icons": "^1.11.6",
+    "react-confetti": "^6.4.0",
     "react-dom": "^19.2.3",
+    "react-icons": "^5.5.0",
+    "react-paystack": "^6.0.0",
+    "react-router-bootstrap": "^0.26.3",
+    "react-router-dom": "^7.11.0",
     "react-scripts": "5.0.1",
+    "react-toastify": "^11.0.5",
+    "recharts": "^3.6.0",
+    "sweetalert": "^2.1.2",
+    "sweetalert2": "^11.26.17",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -35,5 +50,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6"
   }
 }
