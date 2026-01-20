@@ -114,20 +114,46 @@ const PlaceOrderScreen = () => {
     }
   };
 
+
   const handlePaystack = () => {
     const handler = new PaystackPop();
-    handler.open({
-      key: 'pk_test_YOUR_PAYSTACK_KEY',
+    
+    handler.newTransaction({
+      key: 'pk_test_06a68fcb115734baf1107749edcd6773bb881c1e',
       email: userInfo.email,
       amount: Math.round(totalPrice * 1500 * 100), // NGN Conversion
       currency: 'NGN',
-      callback: function(response) {
-        handlePaystackResponse(response);
+      // DO NOT use an async function directly here
+      onSuccess: (transaction) => {
+        // transaction contains { message: "Approved", reference: "..." }
+        completeOrderAfterPayment(transaction);
       },
-      onClose: () => swal("Cancelled", "Payment closed", "info"),
+      onCancel: () => {
+        swal("Cancelled", "Payment window closed", "info");
+        setIsPlacing(false);
+      },
     });
   };
 
+  // 2. Separate function to handle the API call
+  const completeOrderAfterPayment = async (response) => {
+    try {
+      setIsPlacing(true);
+      const order = await createOrderRecord({ 
+        id: response.reference, 
+        status: 'success' 
+      });
+      
+      if (order) {
+        clearCart();
+        navigate('/success', { state: { orderId: order._id } });
+      }
+    } catch (error) {
+      toast.error("Payment successful, but order creation failed. Please contact support.");
+    } finally {
+      setIsPlacing(false);
+    }
+  };
   const handlePlaceOrder = async () => {
     setIsPlacing(true);
     if (paymentMethod === 'COD') {
