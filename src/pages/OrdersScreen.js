@@ -84,7 +84,8 @@ const OrderScreen = () => {
             });
         } 
         else if (payment_mode === 'payWithPaystack') {
-            const handler = PaystackPop.setup({
+            const handler = new PaystackPop();
+            handler.open({
                 key: 'pk_test_06a68fcb115734baf1107749edcd6773bb881c1e',
                 email: userInfo.email,
                 amount: Math.round(finalPrice * 1500 * 100), // Naira conversion
@@ -102,7 +103,6 @@ const OrderScreen = () => {
                 },
                 onClose: () => swal("Cancelled", "Window closed.", "info"),
             });
-            handler.openIframe();
         }
         else if (payment_mode === 'payOnline') {
             // Show Bootstrap Modal for PayPal

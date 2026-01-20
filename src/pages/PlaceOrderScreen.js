@@ -107,8 +107,9 @@ const PlaceOrderScreen = () => {
 };
 
   const handlePaystack = () => {
-    const handler = PaystackPop.setup({
-      key: 'pk_test_YOUR_PAYSTACK_KEY', 
+    const handler = new PaystackPop();
+    handler.open({
+      key: 'pk_test_YOUR_PAYSTACK_KEY',
       email: userInfo.email,
       amount: Math.round(totalPrice * 1500 * 100), // NGN Conversion
       currency: 'NGN',
@@ -121,7 +122,6 @@ const PlaceOrderScreen = () => {
       },
       onClose: () => swal("Cancelled", "Payment closed", "info"),
     });
-    handler.openIframe();
   };
 
   const handlePlaceOrder = async () => {
