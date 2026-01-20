@@ -106,6 +106,14 @@ const PlaceOrderScreen = () => {
   }
 };
 
+  const handlePaystackResponse = async (response) => {
+    const order = await createOrderRecord({ id: response.reference, status: 'success' });
+    if (order) {
+      clearCart();
+      navigate('/success', { state: { orderId: order._id } });
+    }
+  };
+
   const handlePaystack = () => {
     const handler = new PaystackPop();
     handler.open({
@@ -113,12 +121,8 @@ const PlaceOrderScreen = () => {
       email: userInfo.email,
       amount: Math.round(totalPrice * 1500 * 100), // NGN Conversion
       currency: 'NGN',
-      callback: async (response) => {
-        const order = await createOrderRecord({ id: response.reference, status: 'success' });
-        if (order) {
-            clearCart();
-            navigate('/success', { state: { orderId: order._id } });
-        }
+      callback: function(response) {
+        handlePaystackResponse(response);
       },
       onClose: () => swal("Cancelled", "Payment closed", "info"),
     });
