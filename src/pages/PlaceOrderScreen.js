@@ -106,13 +106,6 @@ const PlaceOrderScreen = () => {
   }
 };
 
-  const handlePaystackResponse = async (response) => {
-    const order = await createOrderRecord({ id: response.reference, status: 'success' });
-    if (order) {
-      clearCart();
-      navigate('/success', { state: { orderId: order._id } });
-    }
-  };
 
 
   const handlePaystack = () => {
