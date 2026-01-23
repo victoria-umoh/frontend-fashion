@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Row, Col, Container } from 'react-bootstrap';
+import { Table, Button, Row, Col, Container, Modal } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
 import { PencilSquare, Trash, Plus } from 'react-bootstrap-icons';
 import API from '../../api';
@@ -9,6 +9,8 @@ import Swal from 'sweetalert2';
 
 const ProductListScreen = () => {
     const [products, setProducts] = useState([]);
+    const [showReviews, setShowReviews] = useState(false);
+    const [reviews, setReviews] = useState([]);
     const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
     const fetchProducts = async () => {
@@ -36,6 +38,16 @@ const ProductListScreen = () => {
                 swal("Error", "Failed to delete product", "error");
             }
         }
+    };
+
+    const fetchReviews = async (productId) => {
+      try {
+        const { data } = await API.get(`/api/products/${productId}/reviews`);
+        setReviews(data);
+        setShowReviews(true);
+      } catch (err) {
+        swal('Error', 'Failed to fetch reviews', 'error');
+      }
     };
 
     return (
@@ -71,7 +83,20 @@ const ProductListScreen = () => {
                         <tr key={product._id}>
                             <td className="text-muted small">{product._id.substring(0, 10)}...</td>
                             <td className="fw-bold">{product.name}</td>
-                            <td>${product.price}</td>
+                            <td>
+                              {product.onSale ? (
+                                <>
+                                  <span style={{ textDecoration: 'line-through', color: '#999' }}>
+                                    ₦{Number(product.price).toFixed(2)}
+                                  </span>
+                                  <span style={{ color: 'red', marginLeft: '10px' }}>
+                                    ₦{Number(product.promoPrice).toFixed(2)}
+                                  </span>
+                                </>
+                              ) : (
+                                <span>₦{Number(product.price).toFixed(2)}</span>
+                              )}
+                            </td>
                             <td>{product.category}</td>
                             <td>{product.brand}</td>
                             <td>{product.sizes.join(', ')}</td>
@@ -85,16 +110,46 @@ const ProductListScreen = () => {
                                 <Button 
                                     variant="light" 
                                     size="sm" 
-                                    className="rounded-circle"
+                                    className="me-2 rounded-circle"
                                     onClick={() => deleteHandler(product._id)}
                                 >
                                     <Trash className="text-danger" />
+                                </Button>
+                                <Button 
+                                    variant="info" 
+                                    size="sm" 
+                                    className="rounded-circle"
+                                    onClick={() => fetchReviews(product._id)}
+                                >
+                                    Reviews
                                 </Button>
                             </td>
                         </tr>
                     ))}
                 </tbody>
             </Table>
+
+            <Modal show={showReviews} onHide={() => setShowReviews(false)} centered>
+              <Modal.Header closeButton>
+                <Modal.Title>Product Reviews</Modal.Title>
+              </Modal.Header>
+              <Modal.Body>
+                {reviews.length === 0 ? (
+                  <p>No reviews for this product.</p>
+                ) : (
+                  <ul className="list-unstyled">
+                    {reviews.map((review) => (
+                      <li key={review._id} className="mb-3">
+                        <strong>{review.name}</strong> <span className="text-warning">{'★'.repeat(review.rating)}</span>
+                        <br />
+                        <span className="text-muted small">{new Date(review.createdAt).toLocaleDateString()}</span>
+                        <p className="mt-2">{review.comment}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Modal.Body>
+            </Modal>
         </Container>
     );
 };
