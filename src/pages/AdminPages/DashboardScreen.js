@@ -11,6 +11,7 @@ const DashboardScreen = () => {
         totalOrders: 0,
         totalUsers: 0,
         totalProducts: 0,
+        totalReviews: 0,
         recentOrders: [],
         lowStockProducts: []
     });
@@ -27,7 +28,11 @@ const DashboardScreen = () => {
                 
                 // Fetching from your stats endpoint (make sure backend returns recentOrders/lowStock)
                 const { data } = await API.get('/api/admin/stats', config);
-                setDashboardData(data);
+                                // If backend does not provide totalReviews, calculate it here as a fallback
+                                if (typeof data.totalReviews === 'undefined' && Array.isArray(data.products)) {
+                                    data.totalReviews = data.products.reduce((acc, p) => acc + (Array.isArray(p.reviews) ? p.reviews.length : 0), 0);
+                                }
+                                setDashboardData(data);
                 setLoading(false);
             } catch (error) {
                 console.error('Failed to fetch dashboard stats:', error);
@@ -40,11 +45,23 @@ const DashboardScreen = () => {
 
     // 3. UI Card Configuration
     const cardItems = [
-        { title: 'Revenue', val: `$${dashboardData.totalRevenue}`, icon: <CashStack />, bg: 'bg-success-light', color: 'text-success' },
+        { title: 'Revenue', val: `₦${dashboardData.totalRevenue}`, icon: <CashStack />, bg: 'bg-success-light', color: 'text-success' },
         { title: 'Orders', val: dashboardData.totalOrders, icon: <CartCheck />, bg: 'bg-primary-light', color: 'text-primary' },
         { title: 'Users', val: dashboardData.totalUsers, icon: <People />, bg: 'bg-info-light', color: 'text-info' },
-        { title: 'Products', val: dashboardData.totalProducts, icon: <BoxSeam />, bg: 'bg-warning-light', color: 'text-warning' }
+        { title: 'Products', val: dashboardData.totalProducts, icon: <BoxSeam />, bg: 'bg-warning-light', color: 'text-warning' },
+        { title: 'Reviews', val: dashboardData.totalReviews, icon: <span role="img" aria-label="star">⭐</span>, bg: 'bg-secondary-light', color: 'text-secondary' }
     ];
+            <style>{`
+                .bg-success-light { background-color: #e8f5e9; }
+                .bg-primary-light { background-color: #e3f2fd; }
+                .bg-info-light { background-color: #e0f7fa; }
+                .bg-warning-light { background-color: #fff8e1; }
+                .bg-secondary-light { background-color: #f3f3f3; }
+                .bg-success-soft { background-color: rgba(25, 135, 84, 0.1); }
+                .bg-danger-soft { background-color: rgba(220, 53, 69, 0.1); }
+                .x-small { font-size: 0.75rem; }
+                .btn-xs { padding: 0.25rem 0.4rem; }
+            `}</style>
 
     if (loading) return <Container className="py-5"><h4>Loading Analytics...</h4></Container>;
 
@@ -61,8 +78,8 @@ const DashboardScreen = () => {
                     <Col key={idx} md={3} sm={6} className="mb-3">
                         <Card className="border-0 shadow-sm rounded-4 h-100">
                             <Card.Body className="d-flex align-items-center p-4">
-                                <div className={`p-3 rounded-circle me-3 ${card.bg} ${card.color} d-flex align-items-center justify-content-center`}>
-                                    {React.cloneElement(card.icon, { size: 24 })}
+                                <div className={`p-2 rounded-circle me-1 ${card.bg} ${card.color} d-flex align-items-center justify-content-center`}>
+                                    {React.cloneElement(card.icon, { size: 20 })}
                                 </div>
                                 <div>
                                     <p className="text-muted small mb-0 fw-bold text-uppercase">{card.title}</p>
@@ -104,7 +121,7 @@ const DashboardScreen = () => {
                                             <div className="text-muted x-small">ID: {order._id.substring(18)}</div>
                                         </td>
                                         <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                                        <td className="fw-bold">${order.totalPrice.toFixed(2)}</td>
+                                        <td className="fw-bold">₦{order.totalPrice.toFixed(2)}</td>
                                         <td>
                                             <Badge bg={order.isPaid ? 'success-soft' : 'danger-soft'} 
                                                    className={`${order.isPaid ? 'text-success' : 'text-danger'} rounded-pill px-3`}>
