@@ -8,8 +8,14 @@
 
 import axios from 'axios';
 
+const getApiBaseUrl = () => {
+  let url = process.env.REACT_APP_API_URL || process.env.VITE_API_URL || 'http://localhost:5000';
+  if (typeof url === 'string') url = url.trim();
+  return url;
+};
+
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || process.env.VITE_API_URL || 'http://localhost:5000',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
