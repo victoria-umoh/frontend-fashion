@@ -45,10 +45,10 @@ const CartScreen = () => {
                         <div className="mt-1">
                           {item.onSale ? (
                             <span>
-                              <span className="text-danger font-bold">${priceToUse}</span>
-                              <del className="text-muted ms-2 small">${item.price}</del>
+                              <span className="text-danger font-bold">₦{priceToUse}</span>
+                              <del className="text-muted ms-2 small">₦{item.price}</del>
                             </span>
-                          ) : <span className="text-muted small">${item.price}</span>}
+                          ) : <span className="text-muted small">₦{item.price}</span>}
                         </div>
                       </Col>
                       <Col md={3} xs={6} className="mt-3 mt-md-0">
@@ -77,11 +77,11 @@ const CartScreen = () => {
             <ListGroup variant="flush">
               <ListGroup.Item className="px-0 d-flex justify-content-between border-0">
                 <span>Items ({cartItems.reduce((acc, item) => acc + item.qty, 0)})</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>₦{subtotal.toFixed(2)}</span>
               </ListGroup.Item>
               <ListGroup.Item className="px-0 d-flex justify-content-between border-0 mb-4 font-bold text-lg">
                 <span>Total</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>₦{subtotal.toFixed(2)}</span>
               </ListGroup.Item>
             </ListGroup>
             <Button 

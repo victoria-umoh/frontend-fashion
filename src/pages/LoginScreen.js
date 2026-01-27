@@ -54,35 +54,28 @@ const LoginScreen = () => {
               {error && <Alert variant="danger">{error}</Alert>}
 
               <Form onSubmit={submitHandler}>
-                <div>
-                  <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                  <input
-                    id="login-email"
-                    name="email"
+
+                <Form.Group className="mb-3" controlId="login-email">
+                  <Form.Label>Email Address</Form.Label>
+                  <Form.Control
                     type="email"
-                    autoComplete="email"
                     placeholder="Enter email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black outline-none transition"
                     required
                   />
-                </div>
+                </Form.Group>
 
-                <div>
-                  <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <input
-                    id="login-password"
-                    name="password"
+                <Form.Group className="mb-4" controlId="login-password">
+                  <Form.Label>Password</Form.Label>
+                  <Form.Control
                     type="password"
-                    autoComplete="current-password"
                     placeholder="Enter password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-black outline-none transition"
                     required
                   />
-                </div>
+                </Form.Group>
 
                 <Button
                   type="submit"

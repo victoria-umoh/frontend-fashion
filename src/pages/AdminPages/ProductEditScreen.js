@@ -19,6 +19,7 @@ const ProductEditScreen = () => {
     const [uploading, setUploading] = useState(false);
     const [onSale, setOnSale] = useState(false);
     const [promoPrice, setPromoPrice] = useState(0);
+    const [colors, setColors] = useState([]);
 
 
     const userInfo = JSON.parse(localStorage.getItem('userInfo'));
@@ -34,6 +35,8 @@ const ProductEditScreen = () => {
             setCategory(data.category);
             setCountInStock(data.countInStock);
             setDescription(data.description);
+
+            setColors(Array.isArray(data.colors) ? data.colors : (data.colors ? [data.colors] : []));
         };
         fetchProduct();
     }, [productId]);
@@ -65,7 +68,7 @@ const ProductEditScreen = () => {
                 },
             };
             await API.put(`/api/products/${productId}`, {
-                name, price, image, brand, category, countInStock, description, sizes
+                name, price, image, brand, category, countInStock, description, sizes, colors, onSale, promoPrice
             }, config);
             swal("Success", "Product updated", "success");
             navigate('/admin/productlist');
@@ -124,16 +127,41 @@ const ProductEditScreen = () => {
                         <Form.Control as='textarea' rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
                     </Form.Group>
 
+
+
                     <Form.Group controlId='onSale' className='my-2'>
+                        <Form.Label className='me-3'>On Sale?</Form.Label>
                         <Form.Check
-                            type='checkbox'
-                            label='Is on Sale?'
+                            type='switch'
+                            id='onSale-switch'
+                            label={<span style={{ color: onSale ? '#198754' : '#dc3545', fontWeight: 600 }}>{onSale ? 'Yes (Promo Active)' : 'No (Regular Price)'}</span>}
                             checked={onSale}
                             onChange={(e) => setOnSale(e.target.checked)}
-                        ></Form.Check>
-                        </Form.Group>
+                        />
+                    </Form.Group>
+                    <Form.Group controlId='colors' className='mb-3'>
+                        <Form.Label>Colors</Form.Label>
+                        <Form.Select multiple value={colors} onChange={e => {
+                            const selected = Array.from(e.target.selectedOptions, option => option.value);
+                            setColors(selected);
+                        }}>
+                            <option value="Black">Black</option>
+                            <option value="White">White</option>
+                            <option value="Red">Red</option>
+                            <option value="Blue">Blue</option>
+                            <option value="Green">Green</option>
+                            <option value="Yellow">Yellow</option>
+                            <option value="Pink">Pink</option>
+                            <option value="Purple">Purple</option>
+                            <option value="Orange">Orange</option>
+                            <option value="Brown">Brown</option>
+                            <option value="Gray">Gray</option>
+                            <option value="Other">Other</option>
+                        </Form.Select>
+                        <div className="form-text">Hold Ctrl (Windows) or Cmd (Mac) to select multiple colors.</div>
+                    </Form.Group>
 
-                        <Form.Group controlId='promoPrice' className='my-2'>
+                    <Form.Group controlId='promoPrice' className='my-2'>
                         <Form.Label>Promo Price</Form.Label>
                         <Form.Control
                             type='number'

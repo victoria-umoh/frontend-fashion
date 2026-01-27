@@ -30,6 +30,7 @@ import CouponListScreen from './pages/AdminPages/CouponListScreen';
 import AdminLayout from './pages/AdminPages/AdminLayout';
 import UserListScreen from './pages/AdminPages/UserListScreen';
 
+// Removed import './App.css'; (now imported in index.js)
 
 function App() {
   return (

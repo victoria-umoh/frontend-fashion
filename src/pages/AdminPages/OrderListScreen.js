@@ -3,6 +3,7 @@ import { Table, Button, Container, Badge, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom'; // Added for navigation
 import API from '../../api';
 import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 const OrderListScreen = () => {
     const [orders, setOrders] = useState([]);
@@ -33,22 +34,32 @@ const OrderListScreen = () => {
     }, [userInfo, navigate]);
 
     const deliverHandler = async (orderId) => {
-        if (window.confirm('Are you sure you want to mark this order as delivered?')) {
-            try {
-                const config = {
-                    headers: { Authorization: `Bearer ${userInfo.token}` },
-                };
-                await API.put(`/api/admin/orders/${orderId}/deliver`, {}, config);
-                toast.success('Order status updated!');
-                
-                // Update local state so UI reflects change immediately
-                setOrders(orders.map(o => o._id === orderId ? { ...o, isDelivered: true, deliveredAt: new Date().toISOString() } : o));
-            } catch (err) {
-                toast.error(err.response?.data.message || 'Error updating status');
+        Swal.fire({
+            title: 'Are you sure you want to mark this order as delivered?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, deliver it!',
+            cancelButtonText: 'No, cancel!',
+            color: '#000',
+            background: '#fff',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const config = {
+                        headers: { Authorization: `Bearer ${userInfo.token}` },
+                    };
+                    await API.put(`/api/admin/orders/${orderId}/deliver`, {}, config);
+                    toast.success('Order status updated!');
+                    // Update local state so UI reflects change immediately
+                    setOrders(orders.map(o => o._id === orderId ? { ...o, isDelivered: true, deliveredAt: new Date().toISOString() } : o));
+                } catch (err) {
+                    toast.error(err.response?.data.message || 'Error updating status');
+                }
             }
-        }
+        });
     };
-
     const payHandler = async (orderId) => {
     if (window.confirm('Confirm that payment has been received for this order?')) {
             try {

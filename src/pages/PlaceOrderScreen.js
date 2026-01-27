@@ -114,7 +114,7 @@ const PlaceOrderScreen = () => {
     handler.newTransaction({
       key: 'pk_test_06a68fcb115734baf1107749edcd6773bb881c1e',
       email: userInfo.email,
-      amount: Math.round(totalPrice * 1500 * 100), // NGN Conversion
+      amount: Math.round(totalPrice * 100), // NGN Conversion
       currency: 'NGN',
       // DO NOT use an async function directly here
       onSuccess: (transaction) => {
@@ -199,7 +199,7 @@ const PlaceOrderScreen = () => {
                     {item.name}
                     {item.size && <Badge bg="info" text="dark" className="ms-2">Size: {item.size}</Badge>}
                   </Col>
-                  <Col xs={4} className="text-end">{item.qty} x ${item.onSale ? item.promoPrice : item.price}</Col>
+                  <Col xs={4} className="text-end">{item.qty} x ₦{item.onSale ? item.promoPrice : item.price}</Col>
                 </Row>
               ))}
             </Card>
@@ -230,21 +230,21 @@ const PlaceOrderScreen = () => {
                 </InputGroup>
             </div>
 
-            <div className="d-flex justify-content-between mb-2"><span>Subtotal</span><span>${itemsPrice}</span></div>
+            <div className="d-flex justify-content-between mb-2"><span>Subtotal</span><span>₦{itemsPrice}</span></div>
 
             {appliedCoupon && (
                 <div className="d-flex justify-content-between mb-2 text-success fw-bold">
                     <span>Discount ({appliedCoupon.discount}%)</span>
-                    <span>-${discountPrice}</span>
+                    <span>-₦{discountPrice}</span>
                 </div>
             )}
 
-            <div className="d-flex justify-content-between mb-2"><span>Shipping</span><span>${shippingPrice}</span></div>
-            <div className="d-flex justify-content-between mb-2"><span>Tax (15%)</span><span>${taxPrice}</span></div>
+            <div className="d-flex justify-content-between mb-2"><span>Shipping</span><span>₦{shippingPrice}</span></div>
+            <div className="d-flex justify-content-between mb-2"><span>Tax (15%)</span><span>₦{taxPrice}</span></div>
             
             <div className="d-flex justify-content-between mb-4 fw-bold h4 pt-3 border-top">
                 <span>Total</span>
-                <span className="text-primary">${totalPrice}</span>
+                <span className="text-primary">₦{totalPrice}</span>
             </div>
 
             {paymentMethod === 'PayPal' ? (
@@ -271,7 +271,7 @@ const PlaceOrderScreen = () => {
                 onClick={handlePlaceOrder}
                 disabled={isPlacing || cartItems.length === 0}
               >
-                {isPlacing ? 'PROCESSING...' : (paymentMethod === 'COD' ? 'PLACE ORDER (COD)' : `PAY $${totalPrice}`)}
+                {isPlacing ? 'PROCESSING...' : (paymentMethod === 'COD' ? 'PLACE ORDER (COD)' : `PAY ₦${totalPrice}`)}
               </Button>
             )}
           </Card>

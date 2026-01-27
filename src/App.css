@@ -1,3 +1,117 @@
+/* Responsive improvements for small screens */
+@media (max-width: 991.98px) {
+  .navbar .navbar-nav {
+    background: linear-gradient(90deg, #ff6a00 0%, #ee0979 100%) !important;
+    padding: 1rem 0.5rem;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 4px 16px rgba(238,9,121,0.08);
+  }
+  .navbar .navbar-nav .nav-link,
+  .navbar .navbar-nav .dropdown-toggle {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin: 0.2rem 0 !important;
+    padding: 0.75rem 1.2rem !important;
+    font-size: 1.1rem !important;
+    border-radius: 12px !important;
+  }
+  .navbar .dropdown-menu {
+    font-size: 1rem !important;
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .product-card .card-img-top {
+    height: 180px;
+  }
+  .product-card {
+    margin-bottom: 1.5rem;
+  }
+  .row.g-4 {
+    row-gap: 1.5rem;
+  }
+  .btn.btn-outline-dark {
+    width: 100%;
+    margin: 0.25rem 0 !important;
+    font-size: 1rem;
+  }
+  .mb-4.text-center {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .navbar-brand span {
+    font-size: 1.1rem !important;
+    letter-spacing: 1px;
+  }
+  .display-4 {
+    font-size: 2rem !important;
+  }
+  .product-card .card-img-top {
+    height: 120px;
+  }
+}
+/* Utility class to remove underline from text */
+.text-underline-none {
+  text-decoration: none !important;
+}
+/* Colorful nav-link and dropdown styles */
+/* Stronger specificity and !important for nav links and dropdowns */
+.navbar .navbar-nav .nav-link,
+.navbar .navbar-nav .dropdown-toggle {
+  color: #fff !important;
+  font-weight: 600 !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 20px !important;
+  margin: 0 0.2rem !important;
+  background: transparent !important;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s !important;
+}
+.navbar .navbar-nav .nav-link:hover,
+.navbar .navbar-nav .nav-link.active,
+.navbar .navbar-nav .dropdown-toggle:hover,
+.navbar .navbar-nav .dropdown-toggle:focus,
+.navbar .navbar-nav .show > .nav-link,
+.navbar .navbar-nav .show > .dropdown-toggle {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffe082 !important;
+  box-shadow: 0 2px 8px rgba(238,9,121,0.10) !important;
+}
+.navbar .dropdown-menu {
+  background: linear-gradient(90deg, #ff6a00 0%, #ee0979 100%) !important;
+  border: none !important;
+}
+.navbar .dropdown-item {
+  color: #fff !important;
+  font-weight: 500 !important;
+  transition: background 0.2s, color 0.2s !important;
+}
+.navbar .dropdown-item:hover, .navbar .dropdown-item.active {
+  background: rgba(255,255,255,0.12) !important;
+  color: #ffe082 !important;
+}
+/* Colorful Navbar Styles */
+.colorful-navbar {
+  background: linear-gradient(90deg, #ff6a00 0%, #ee0979 100%);
+}
+.colorful-link {
+  color: #fff !important;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.colorful-link:hover, .colorful-link.active {
+  color: #ffe082 !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.navbar-brand span {
+  letter-spacing: 2px;
+}
 .App {
   text-align: center;
 }
@@ -15,4 +129,22 @@
 
 .App-link {
   color: #61dafb;
+}
+
+/* Ensure all product cards are the same size on HomeScreen */
+.product-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card .card-img-top {
+  height: 220px;
+  object-fit: cover;
 }
