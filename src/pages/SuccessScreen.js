@@ -66,6 +66,7 @@ const SuccessScreen = () => {
     
     // Grab the orderId from the state passed via navigate
     const orderId = location.state?.orderId;
+    const paymentMethod = location.state?.paymentMethod;
 
     const [windowDimension, setWindowDimension] = useState({ 
         width: window.innerWidth, 
@@ -119,8 +120,12 @@ const SuccessScreen = () => {
                         <CheckCircleFill size={70} className="text-success animate__animated animate__bounceIn" />
                     </div>
                     
-                    <h1 className="fw-bold mb-2">Payment Successful!</h1>
-                    <p className="text-muted fs-5 mb-5">Your order is on its way to being processed.</p>
+                    <h1 className="fw-bold mb-2">{paymentMethod === 'COD' ? 'Order Placed!' : 'Payment Successful!'}</h1>
+                    <p className="text-muted fs-5 mb-5">
+                        {paymentMethod === 'COD'
+                            ? 'Your order is confirmed. Payment is due on delivery.'
+                            : 'Your order is on its way to being processed.'}
+                    </p>
 
                     <Card className="border-0 shadow-sm rounded-4 mb-4 bg-light">
                         <Card.Body className="p-4">
@@ -155,7 +160,7 @@ const SuccessScreen = () => {
                                 <HouseFill className="me-2" /> Shop More
                             </Button>
                         </Link>
-                        <Link to="/profile" className="flex-grow-1">
+                        <Link to={`/order/${orderId}`} className="flex-grow-1">
                             <Button variant="outline-dark" size="lg" className="w-100 py-3 rounded-pill">
                                 <BagCheckFill className="me-2" /> View Order
                             </Button>

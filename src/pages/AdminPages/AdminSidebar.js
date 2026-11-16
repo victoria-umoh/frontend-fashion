@@ -18,30 +18,24 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <div className="bg-dark text-white min-vh-100 p-3 shadow-lg" style={{ width: '260px' }}>
-      <div className="text-center mb-5 mt-3">
-        <h5 className="text-uppercase tracking-widest font-bold">Admin Panel</h5>
-        <hr className="bg-secondary" />
-      </div>
-
-      <nav className="nav flex-column gap-2">
+    <aside className="admin-sidebar">
+      <Link to="/admin/dashboard" className="admin-brand">SAINT VICTORIA <span>STUDIO</span></Link>
+      <nav className="admin-nav" aria-label="Admin navigation">
         {menuItems.map((item) => (
           <Link
             key={item.name}
             to={item.link}
-            className={`nav-link d-flex align-items-center justify-content-between rounded transition-all py-3 px-3 ${
-              path === item.link ? 'bg-primary text-white' : 'text-secondary hover:bg-gray-800'
-            }`}
+            className={`admin-nav-link${path === item.link ? ' is-active' : ''}`}
+            aria-current={path === item.link ? 'page' : undefined}
           >
-            <div className="d-flex align-items-center gap-3">
-              {item.icon}
-              <span>{item.name}</span>
-            </div>
+            {item.icon}
+            <span>{item.name}</span>
             {path === item.link && <FaChevronRight size={10} />}
           </Link>
         ))}
       </nav>
-    </div>
+      <Link to="/" className="admin-store-link">← Back to the store</Link>
+    </aside>
   );
 };
 

@@ -21,7 +21,7 @@ const OrderScreen = () => {
     const fetchOrder = useCallback(async () => {
         try {
             const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-            const { data } = await axios.get(`/api/orders/${orderId}`, config);
+            const { data } = await API.get(`/api/orders/${orderId}`, config);
             setOrder(data);
             setLoading(false);
         } catch (err) {
@@ -101,7 +101,7 @@ const PayPalButtonWrapper = ({ currency, showSpinner, amount, onSuccess }) => {
 
     const updateOrderOnServer = async (paymentData) => {
         try {
-            await axios.put(`/api/orders/${orderId}/pay`, paymentData, {
+            await API.put(`/api/orders/${orderId}/pay`, paymentData, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             });
             swal("Success", "Payment Successful!", "success");

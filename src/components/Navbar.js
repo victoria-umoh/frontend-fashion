@@ -1,113 +1,84 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { NavDropdown } from 'react-bootstrap';
-import { LinkContainer } from 'react-router-bootstrap';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Bag, List, Person, XLg } from 'react-bootstrap-icons';
 import { useCart } from './context/CartContext';
 
 const Navbar = () => {
   const { cartItems, clearCart } = useCart();
-  
-  // Calculate total items in cart
+  const location = useLocation();
+  const navigate = useNavigate();
   const cartCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
-  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  let userInfo = null;
+  try {
+    userInfo = JSON.parse(localStorage.getItem('userInfo') || 'null');
+  } catch {
+    localStorage.removeItem('userInfo');
+  }
 
   const logoutHandler = () => {
-    // Save cart for this user before clearing
-    localStorage.setItem('cart_' + userInfo.id, JSON.stringify(cartItems));
     localStorage.removeItem('userInfo');
     clearCart();
-    window.location.href = '/login';
+    navigate('/login');
   };
 
-  const [showNav, setShowNav] = useState(false);
-
-  const handleToggle = () => setShowNav((prev) => !prev);
-  const handleNavLinkClick = () => setShowNav(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
 
   return (
-    <nav className="navbar navbar-expand-lg shadow-sm colorful-navbar">
-      <div className="container">
-        <Link className="navbar-brand fw-bold fs-4 text-white" to="/">
-          <span style={{
-            background: 'linear-gradient(90deg, #ff6a00 100%, #f8f0f4 100%)',
-            WebkitBackgroundClip: 'text',
-            fontWeight: 800
-          }}>
-            Saint Victoria
-          </span>
-        </Link>
-        <button
-          className="navbar-toggler border-0 p-2"
-          type="button"
-          aria-label="Toggle navigation"
-          style={{ outline: 'none' }}
-          onClick={handleToggle}
-          aria-expanded={showNav}
-        >
-          <span style={{ display: 'inline-block', width: 28, height: 28 }}>
-            <svg viewBox="0 0 32 32" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect y="6" width="32" height="4" rx="2" fill="#fff" />
-              <rect y="14" width="32" height="4" rx="2" fill="#fff" />
-              <rect y="22" width="32" height="4" rx="2" fill="#fff" />
-            </svg>
-          </span>
-        </button>
-        <div className={`collapse navbar-collapse${showNav ? ' show' : ''}`} id="navbarNav">
-          <ul className="navbar-nav ms-auto">
-            <li className="nav-item">
-              <Link className="nav-link" to="/" onClick={handleNavLinkClick}>
-                Home
-              </Link>
-            </li>
-            {/* <li className="nav-item">
-              <Link className="nav-link" to="/products">
-                Products
-              </Link>
-            </li> */}
-            <li className="nav-item">
-              <Link className="nav-link" to="/cart" onClick={handleNavLinkClick}>
-                Cart ({cartCount})
-              </Link>
-            </li>
-            {userInfo && userInfo.role === 'user' ? (
-              <li className='nav-item'>
-                <NavDropdown title={userInfo.name} id='username'>
-                  <LinkContainer to='/profile'>
-                    <NavDropdown.Item>Profile</NavDropdown.Item>
-                  </LinkContainer>
-                  <NavDropdown.Item onClick={logoutHandler}>Logout</NavDropdown.Item>
-                </NavDropdown>
-              </li>
-            ) : (
-              <li className="nav-item">
-                <Link className="nav-link" to="/login" onClick={handleNavLinkClick}>
-                  Login
-                </Link>
-              </li>
-            )}
-           {/* FIXED: Wrapped in an <li> and added a null check for isAdmin */}
-            {userInfo && userInfo.role === 'admin' && (
-              <li className='nav-item'>
-                <NavDropdown title={userInfo.name || 'Admin'} id='adminmenu' className="ms-lg-3">
-                  <LinkContainer to='/admin/dashboard'>
-                    <NavDropdown.Item>Dashboard</NavDropdown.Item>
-                  </LinkContainer>
-                  <LinkContainer to='/admin/dashboard'>
-                    <NavDropdown.Item>Products</NavDropdown.Item>
-                  </LinkContainer>
-                  {/* <LinkContainer to='/admin/orderlist'>
-                    <NavDropdown.Item>Orders</NavDropdown.Item>
-                  </LinkContainer> */}
-                  <NavDropdown.Divider />
-                  <NavDropdown.Item onClick={logoutHandler}>Logout</NavDropdown.Item>
-                </NavDropdown>
-              </li>
-            )}
-          </ul>
-        </div>
+    <header className="site-header">
+      <div className="announcement-bar">
+        <span>THE NEW SEASON IS HERE</span>
+        <Link to="/#collection" onClick={closeMenu}>Discover the edit <span aria-hidden="true">→</span></Link>
       </div>
-    </nav>
+      <nav className="site-nav" aria-label="Main navigation">
+        <div className="site-nav-inner">
+          <Link className="brand-mark" to="/" onClick={closeMenu}>SAINT VICTORIA</Link>
+        <button
+          className="menu-toggle"
+          type="button"
+          aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={menuOpen}
+          aria-controls="primary-navigation"
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <XLg aria-hidden="true" /> : <List aria-hidden="true" />}
+        </button>
+          <div className={`site-nav-content${menuOpen ? ' is-open' : ''}`} id="primary-navigation">
+            <div className="site-nav-links">
+              <Link
+                className={location.pathname === '/' ? 'is-current' : ''}
+                to="/#collection"
+                onClick={closeMenu}
+              >
+                Shop
+              </Link>
+              <Link to="/#collection" onClick={closeMenu}>New arrivals</Link>
+              <a href="#footer" onClick={closeMenu}>Our world</a>
+            </div>
+            <div className="site-nav-actions">
+              {userInfo?.role === 'admin' && (
+                <Link to="/admin/dashboard" onClick={closeMenu}>Studio</Link>
+              )}
+              <Link to={userInfo ? '/profile' : '/login'} onClick={closeMenu} aria-label={userInfo ? 'My account' : 'Sign in'}>
+                <Person aria-hidden="true" />
+                <span>{userInfo?.name?.split(' ')[0] || 'Account'}</span>
+              </Link>
+              {userInfo && (
+                <button type="button" className="nav-signout" onClick={logoutHandler}>
+                  Sign out
+                </button>
+              )}
+              <Link className="bag-link" to="/cart" onClick={closeMenu} aria-label={`Shopping bag, ${cartCount} items`}>
+                <Bag aria-hidden="true" />
+                <span>Bag</span>
+                <span className="bag-count">{cartCount}</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
   );
 };
 

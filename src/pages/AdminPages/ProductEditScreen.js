@@ -1,4 +1,4 @@
-import API from '../../api';
+import API, { getImageUrl } from '../../api';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Form, Button, Container, Card } from 'react-bootstrap';
@@ -42,18 +42,26 @@ const ProductEditScreen = () => {
     }, [productId]);
 
     const uploadFileHandler = async (e) => {
-        const file = e.target.files[0];
+        const file = e.target.files?.[0];
+        if (!file) return;
+
         const formData = new FormData();
         formData.append('image', file);
         setUploading(true);
 
         try {
-            const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-            const { data } = await API.post('/api/upload', formData, config);
-            setImage(data); // Set the image path returned from server
-            setUploading(false);
+            if (!userInfo?.token) throw new Error('Sign in as an admin before uploading.');
+            const { data } = await API.post('/api/upload', formData, {
+                headers: { Authorization: `Bearer ${userInfo.token}` },
+            });
+            const imagePath = typeof data === 'string' ? data : data?.url || data?.path;
+            if (!imagePath) throw new Error('The image service returned no image URL.');
+            setImage(getImageUrl(imagePath));
+            swal('Success', 'Image uploaded successfully', 'success');
         } catch (error) {
             console.error(error);
+            swal('Error', error.response?.data?.message || error.message || 'Image upload failed.', 'error');
+        } finally {
             setUploading(false);
         }
     };
@@ -91,7 +99,8 @@ const ProductEditScreen = () => {
                     <Form.Group controlId='image' className="mb-3">
                         <Form.Label>Image URL or Upload File</Form.Label>
                         <Form.Control type='text' value={image} onChange={(e) => setImage(e.target.value)} className="mb-2" />
-                        <Form.Control type="file" label='Choose File' onChange={uploadFileHandler} />
+                        <Form.Control type="file" accept="image/jpeg,image/png,image/webp" label='Choose File' onChange={uploadFileHandler} />
+                        {image && <img className="admin-image-preview" src={getImageUrl(image)} alt="Product preview" />}
                         {uploading && <p>Uploading...</p>}
                     </Form.Group>
 
@@ -112,7 +121,7 @@ const ProductEditScreen = () => {
                             <option value="XL">XL</option>
                             <option value="XXL">XXL</option>
                             <option value="XXXL">XXXL</option>
-                <           option value="One Size">One Size</option>
+                            <option value="One Size">One Size</option>
                         </Form.Select>
                         <div className="form-text">Hold Ctrl (Windows) or Cmd (Mac) to select multiple sizes.</div>
                     </Form.Group>
@@ -171,7 +180,7 @@ const ProductEditScreen = () => {
                         ></Form.Control>
                     </Form.Group>
 
-                    <Button type='submit' variant='dark' className="rounded-pill px-5">Update Product</Button>
+                    <Button type='submit' variant='dark' className="rounded-pill px-5" disabled={uploading}>Update Product</Button>
                 </Form>
             </Card>
         </Container>

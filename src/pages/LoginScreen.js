@@ -47,7 +47,7 @@ const LoginScreen = () => {
     <Container className="py-5">
       <Row className="justify-content-center">
         <Col md={6} lg={5}>
-          <Card className="shadow-sm border-0">
+          <Card className="auth-card">
             <Card.Body className="p-4">
               <h2 className="text-center fw-bold mb-4">Sign In</h2>
 
@@ -77,6 +77,9 @@ const LoginScreen = () => {
                   />
                 </Form.Group>
 
+                <div className="text-end mb-3">
+                  <Link to="/forgot-password" className="small">Forgot password?</Link>
+                </div>
                 <Button
                   type="submit"
                   variant="dark"
@@ -92,6 +95,11 @@ const LoginScreen = () => {
                   Register
                 </Link>
               </div>
+              {error?.toLowerCase().includes('verify your email') && (
+                <div className="text-center mt-2">
+                  <Link to={`/verify-email?email=${encodeURIComponent(email)}`}>Resend verification email</Link>
+                </div>
+              )}
             </Card.Body>
           </Card>
         </Col>

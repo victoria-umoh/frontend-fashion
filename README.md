@@ -2,6 +2,28 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Running the app
+
+Start the backend from the `backend-fashion` folder:
+
+```sh
+npm run dev
+```
+
+Start this React app in a second terminal:
+
+```sh
+npm start
+```
+
+The frontend connects to `http://localhost:5001` by default. The backend's `.env` file sets its port to `5001` and allows requests from `http://localhost:3000`. If the backend runs at a different URL, set `REACT_APP_API_URL` before starting the frontend.
+
+## Production deployment
+
+Set `REACT_APP_API_URL` to the public HTTPS backend origin in the frontend hosting provider before building. Do not put Paystack secret keys or email credentials in frontend variables; payment initialization and verification happen on the backend. Configure the frontend host to serve the single-page app routes `/payment/callback`, `/verify-email`, and `/reset-password` by rewriting unknown paths to `index.html`.
+
+The root `vercel.json` configures this Create React App build and its client-side route fallback. To deploy, push `feature/modern-ecommerce`, import `victoria-umoh/frontend-fashion` into Vercel, and set that branch as the production branch (otherwise it will be a preview deployment). Add `REACT_APP_API_URL` as a Vercel environment variable using the Render API's HTTPS origin, then redeploy. After both provider URLs exist, set the Render `FRONTEND_URL` to the Vercel origin. Keep all private credentials in Render, never in Vercel's `REACT_APP_*` variables.
+
 ## Available Scripts
 
 In the project directory, you can run:

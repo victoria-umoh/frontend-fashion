@@ -5,7 +5,14 @@ import CheckoutSteps from '../components/CheckoutSteps';
 
 const ShippingScreen = () => {
   // Check if there is already an address in localStorage
-  const savedAddress = JSON.parse(localStorage.getItem('shippingAddress')) || {};
+  const savedAddress = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('shippingAddress') || '{}') || {};
+    } catch {
+      localStorage.removeItem('shippingAddress');
+      return {};
+    }
+  })();
 
   const [address, setAddress] = useState(savedAddress.address || '');
   const [city, setCity] = useState(savedAddress.city || '');
@@ -23,12 +30,15 @@ const ShippingScreen = () => {
   };
 
   return (
-    <Container>
+    <Container className="shipping-page py-5">
       <CheckoutSteps step1 step2 />
       <Row className='justify-content-md-center'>
         <Col xs={12} md={6}>
-          <h1 className="mb-4 text-uppercase">Shipping</h1>
-          <Form onSubmit={submitHandler}>
+          <div className="page-heading">
+            <p className="eyebrow">ALMOST THERE</p>
+            <h1>Where should we send it?</h1>
+          </div>
+          <Form onSubmit={submitHandler} className="shipping-form">
             <Form.Group className="mb-3" controlId='address'>
               <Form.Label>Address</Form.Label>
               <Form.Control

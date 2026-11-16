@@ -24,7 +24,7 @@ const OrderScreen = () => {
         const fetchOrder = async () => {
             try {
                 const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-                const { data } = await axios.get(`/api/orders/${orderId}`, config);
+                const { data } = await API.get(`/api/orders/${orderId}`, config);
                 setOrder(data);
                 setLoading(false);
             } catch (err) {
@@ -55,7 +55,7 @@ const OrderScreen = () => {
             const payment_id = details.id;
             
             // Update order status in DB
-            axios.put(`/api/orders/${orderId}/pay`, { 
+            API.put(`/api/orders/${orderId}/pay`, {
                 payment_id, 
                 payment_mode: 'PayPal' 
             }, {
@@ -76,7 +76,7 @@ const OrderScreen = () => {
         const finalPrice = order.totalPrice - discount;
 
         if (payment_mode === 'cod') {
-            axios.put(`/api/orders/${orderId}/pay`, { payment_mode: 'COD' }, {
+            API.put(`/api/orders/${orderId}/pay`, { payment_mode: 'COD' }, {
                 headers: { Authorization: `Bearer ${userInfo.token}` }
             }).then(res => {
                 swal("Success", "Order set to Cash on Delivery", "success");
@@ -91,7 +91,7 @@ const OrderScreen = () => {
                 amount: Math.round(finalPrice * 1500 * 100), // Naira conversion
                 currency: 'NGN',
                 callback: function(response) {
-                    axios.put(`/api/orders/${orderId}/pay`, { 
+                    API.put(`/api/orders/${orderId}/pay`, {
                         reference: response.reference,
                         payment_mode: 'Paystack'
                     }, {

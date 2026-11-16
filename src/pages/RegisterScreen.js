@@ -26,13 +26,23 @@ const RegisterScreen = () => {
       setMessage('Passwords do not match');
     } else {
       setMessage(null);
+      setError(null);
       try {
         const config = { headers: { 'Content-Type': 'application/json' } };
         const { data } = await API.post('/api/auth/register', { name, email, password }, config);
-        localStorage.setItem('userInfo', JSON.stringify(data));
-        navigate('/');
+        if (data.token) {
+          localStorage.setItem('userInfo', JSON.stringify(data));
+          navigate('/');
+        } else {
+          navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+        }
       } catch (err) {
-        setError(err.response && err.response.data.message ? err.response.data.message : err.message);
+        const errorMessage = err.response?.data?.message || err.message;
+        if (err.response?.status === 503) {
+          navigate(`/verify-email?email=${encodeURIComponent(email)}`, { state: { notice: errorMessage } });
+        } else {
+          setError(errorMessage);
+        }
       }
     }
   };
@@ -41,12 +51,13 @@ const RegisterScreen = () => {
     <Container>
       <Row className="justify-content-md-center mt-5">
         <Col xs={12} md={6}>
-          <Card className="shadow-sm p-4">
+          <Card className="auth-card p-4">
             <Card.Body>
               <h1 className="text-center mb-4">Sign Up</h1>
               
               {message && <Alert variant="danger">{message}</Alert>}
               {error && <Alert variant="danger">{error}</Alert>}
+              {error && <div className="mb-3"><Link to={`/verify-email?email=${encodeURIComponent(email)}`}>Resend verification email</Link></div>}
 
               <Form onSubmit={submitHandler}>
                 <Form.Group className="mb-3" controlId="name">

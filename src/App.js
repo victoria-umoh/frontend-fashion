@@ -14,10 +14,13 @@ import ShippingScreen from './pages/ShippingScreen';
 import PlaceOrderScreen from './pages/PlaceOrderScreen';
 import ProfileScreen from './pages/ProfileScreen';
 import OrderDetailsScreen from './pages/OrderDetailsScreen';
-import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import CheckoutSteps from './components/CheckoutSteps';
 import MyOrdersScreen from './pages/MyOrdersScreen';  
 import SuccessScreen from './pages/SuccessScreen';
+import PaymentCallbackScreen from './pages/PaymentCallbackScreen';
+import ForgotPasswordScreen from './pages/ForgotPasswordScreen';
+import ResetPasswordScreen from './pages/ResetPasswordScreen';
+import VerifyEmailScreen from './pages/VerifyEmailScreen';
 
 import AdminRoute from './Routes/AdminRoute';
 import OrderListScreen from './pages/AdminPages/OrderListScreen';
@@ -29,26 +32,26 @@ import ProductEditScreen from './pages/AdminPages/ProductEditScreen';
 import CouponListScreen from './pages/AdminPages/CouponListScreen';
 import AdminLayout from './pages/AdminPages/AdminLayout';
 import UserListScreen from './pages/AdminPages/UserListScreen';
-
-// Removed import './App.css'; (now imported in index.js)
+import Footer from './components/Footer';
 
 function App() {
   return (
-    // 2. Wrap everything inside CartProvider
-    <CartProvider> 
-      {/* Replace YOUR_PAYPAL_CLIENT_ID with your real PayPal client ID below */}
-      <PayPalScriptProvider options={{ "client-id": "REPLACE_WITH_YOUR_REAL_PAYPAL_CLIENT_ID" }}>
-        <Router>
-          <div className="d-flex flex-column min-vh-100 bg-light">
+    <CartProvider>
+      <Router>
+          <div className="app-shell">
             <Navbar />
-            <main className="container py-5 flex-grow-1">
+            <main className="site-main">
               <ToastContainer position="top-center" autoClose={3000} />
               <Routes>
-                <Route path="/" element={<HomeScreen />} exact />
+                <Route path="/" element={<HomeScreen />} />
+                <Route path="/products" element={<HomeScreen />} />
                 <Route path="/product/:id" element={<ProductScreen />} />
                 <Route path="/cart" element={<CartScreen />} />
                 <Route path="/login" element={<LoginScreen />} />
                 <Route path="/register" element={<RegisterScreen />} />
+                <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+                <Route path="/reset-password" element={<ResetPasswordScreen />} />
+                <Route path="/verify-email" element={<VerifyEmailScreen />} />
                 <Route path='/shipping' element={<ShippingScreen />} />
                 <Route path='/profile' element={<ProfileScreen />} />
                 <Route path='/placeorder' element={<PlaceOrderScreen />} />
@@ -56,11 +59,13 @@ function App() {
                 <Route path='/order/:id' element={<OrderDetailsScreen />} />
                 <Route path='/checkout' element={<CheckoutSteps step1 step2 step4 />} />
                 <Route path='/success' element={<SuccessScreen />} />
+                <Route path='/payment/callback' element={<PaymentCallbackScreen />} />
 
                 {/* ADMIN ONLY ROUTES */}
                 {/* Admin Protected Routes */}
                 <Route path="/admin" element={<AdminRoute />}>
-                  <Route path='/admin' element={<AdminLayout />}>
+                  <Route element={<AdminLayout />}>
+                    <Route index element={<DashboardScreen />} />
                     <Route path='dashboard' element={<DashboardScreen />} />
                     <Route path="addproducts" element={<ProductCreateScreen />} />
                     <Route path='productlist' element={<ProductListScreen />} />
@@ -74,11 +79,11 @@ function App() {
                 {/* Catch-all for 404s */}
                 <Route path="*" element={<NotFoundScreen />} />
 
-              </Routes> 
+              </Routes>
             </main>
+            <Footer />
           </div>
-        </Router>
-      </PayPalScriptProvider>
+      </Router>
     </CartProvider>
   );
 }

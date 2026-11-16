@@ -1,261 +1,303 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Form, ListGroup, Button, Col } from 'react-bootstrap';
-import API from '../api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Bag, Check2, Truck } from 'react-bootstrap-icons';
+import { Button, Form } from 'react-bootstrap';
+import API, { getImageUrl } from '../api';
 import { useCart } from '../components/context/CartContext';
 import Message from '../components/Message';
 import Rating from './Rating';
-import Swal from 'sweetalert2'
+import formatCurrency from '../utils/formatCurrency';
 import { toast } from 'react-toastify';
-
-
 
 const ProductScreen = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { addToCart } = useCart(); // Use the cart function
-
-  const [product, setProduct] = useState({});
-  const [qty, setQty] = useState(1);
+  const { addToCart } = useCart();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState('');
-
-
-  const [rating, setRating] = useState(0);
+  const [selectedColor, setSelectedColor] = useState('');
+  const [rating, setRating] = useState('');
   const [comment, setComment] = useState('');
   const [canReview, setCanReview] = useState(false);
 
-  // Get userInfo from localStorage for use in render and submitHandler
-  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  const userInfo = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('userInfo') || 'null');
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
-    const checkEligibility = async () => {
-      if (userInfo && userInfo.token && product._id) {
-        try {
-          const config = {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${userInfo.token}`,
-            },
-          };
-          const { data } = await API.get('/api/orders/myorders', config);
-          const hasPurchased = data.some(order =>
-            order.isPaid && order.orderItems.some(item => item.product === product._id)
-          );
-          setCanReview(hasPurchased);
-        } catch (err) {
-          setCanReview(false);
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+
+    API.get(`/api/products/${id}`, { signal: controller.signal })
+      .then(({ data }) => {
+        setProduct(data);
+        setSelectedSize(data.sizes?.length === 1 ? data.sizes[0] : '');
+        setSelectedColor(data.colors?.length === 1 ? data.colors[0] : '');
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted) {
+          setError(requestError.response?.data?.message || 'We couldn’t load this piece. Please try again.');
         }
-      } else {
-        setCanReview(false);
-      }
-    };
-    checkEligibility();
-  }, [product._id, userInfo]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
 
-
-  useEffect(() => {
-    const fetchProduct = async () => {
-      const { data } = await API.get(`/api/products/${id}`);
-      setProduct(data);
-    };
-    fetchProduct();
+    return () => controller.abort();
   }, [id]);
 
-  // Handler for adding to cart
-  const addToCartHandler = () => {
-    if (!selectedSize && product.sizes?.length > 0) {
-      // Swal.fire('Please select a size');
-      Swal.fire({
-              text: 'Please select a size before adding to cart.',
-              icon: 'warning',
-              timer: 3000,
-              showConfirmButton: false});
-      return;
+  useEffect(() => {
+    if (!userInfo?.token || !product?._id) {
+      setCanReview(false);
+      return undefined;
     }
-    // We pass the product, quantity, and the selected size to the context
-    addToCart({ ...product, size: selectedSize }, qty);
-    navigate('/cart'); // Redirect to cart page after adding
-  };
 
-// Handler for submitting a review/rating
-const submitHandler = async (e) => {
-  e.preventDefault();
-  
-  if (rating === 0) {
-    toast.error('Please select a rating');
-    return;
-  }
-
-
-  try {
+    const controller = new AbortController();
     const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${userInfo.token}`,
-      },
+      headers: { Authorization: `Bearer ${userInfo.token}` },
+      signal: controller.signal,
     };
 
-    await API.post(`/api/products/${id}/reviews`, { rating, comment }, config);
-    
-    toast.success('Review submitted successfully!');
-    setRating(0);
-    setComment('');
-    // Refresh product details to show the new review
-    // Refresh product details to show the new review
-    // Re-fetch product data
-    const { data } = await API.get(`/api/products/${id}`);
-    setProduct(data);
-  } catch (err) {
-    toast.error(err.response?.data.message || 'Already reviewed this product');
+    API.get('/api/orders/myorders', config)
+      .then(({ data }) => {
+        const hasPurchased = data.some((order) => (
+          order.isPaid
+          && order.orderItems.some((item) => String(item.product?._id || item.product) === String(product._id))
+        ));
+        setCanReview(hasPurchased);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCanReview(false);
+      });
+
+    return () => controller.abort();
+  }, [product?._id, userInfo]);
+
+  const addToBag = () => {
+    if (!product) return;
+    if (product.sizes?.length && !selectedSize) {
+      toast.error('Choose a size before adding this piece to your bag.');
+      return;
+    }
+    if (product.colors?.length && !selectedColor) {
+      toast.error('Choose a colour before adding this piece to your bag.');
+      return;
+    }
+    if (Number(product.countInStock) < 1) {
+      toast.error('This piece is currently out of stock.');
+      return;
+    }
+
+    addToCart({ ...product, size: selectedSize, color: selectedColor }, quantity);
+    toast.success('Added to your bag.');
+  };
+
+  const submitReview = async (event) => {
+    event.preventDefault();
+    if (!rating) {
+      toast.error('Choose a rating first.');
+      return;
+    }
+
+    try {
+      await API.post(
+        `/api/products/${id}/reviews`,
+        { rating: Number(rating), comment },
+        { headers: { Authorization: `Bearer ${userInfo.token}` } }
+      );
+      const { data } = await API.get(`/api/products/${id}`);
+      setProduct(data);
+      setRating('');
+      setComment('');
+      toast.success('Thank you for sharing your thoughts.');
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || 'Your review could not be submitted.');
+    }
+  };
+
+  if (loading) {
+    return <div className="container py-5"><p className="eyebrow">THE SAINT VICTORIA EDIT</p><h1>Finding your piece…</h1></div>;
   }
-};
 
-const Savings = ({ price, promoPrice }) => {
-  if (!promoPrice || promoPrice >= price) return null;
-  
-  const percentage = Math.round(((price - promoPrice) / price) * 100);
-  
-  return (
-    <div className="promo-badge">
-      <span className="text-danger">Save {percentage}%!</span>
-      <h3 className="text-success">${promoPrice}</h3>
-      <del className="text-muted">${price}</del>
-    </div>
-  );
-};
+  if (error || !product) {
+    return (
+      <div className="container py-5">
+        <Message variant="danger">{error || 'This piece could not be found.'}</Message>
+        <Link className="button button-outline" to="/#collection"><ArrowLeft /> Back to the collection</Link>
+      </div>
+    );
+  }
+
+  const inStock = Number(product.countInStock) > 0;
+  const salePrice = product.onSale && Number(product.promoPrice) > 0 ? product.promoPrice : product.price;
 
   return (
-    <div className="container py-5">
-      <Link to="/" className="text-muted small mb-4 d-inline-block">
-        ← Back to Collection
-      </Link>
-      
-      <div className="row g-5">
-        <div className="col-md-6">
-          <div className="rounded shadow">
-            <img src={product.image} alt={product.name} className="img-fluid w-100 rounded" />
-          </div>
+    <div className="container product-detail-page">
+      <Link to="/#collection" className="back-link"><ArrowLeft aria-hidden="true" /> Back to the collection</Link>
+
+      <div className="product-detail">
+        <div className="detail-image-wrap">
+          <img
+            src={getImageUrl(product.image)}
+            alt={`${product.name}${product.brand ? ` by ${product.brand}` : ''}`}
+            className="detail-image"
+          />
+          {product.onSale && <span className="product-badge">A little less</span>}
         </div>
 
-        <div className="col-md-6 d-flex flex-column gap-3">
-          <h1 className="display-4 fw-bold text-dark">{product.name}</h1>
-          {/* Show savings if promoPrice exists, else show regular price */}
-          {product.promoPrice ? (
-            <Savings price={product.price} promoPrice={product.promoPrice} />
-          ) : (
-            <p className="h4 text-dark">${product.price}</p>
-          )}
-          <hr />
-          <p className="text-muted">{product.description}</p>
-          
-          {/* Size Selection */}
+        <div className="detail-info">
+          <p className="eyebrow">{product.category} {product.brand ? ` / ${product.brand}` : ''}</p>
+          <h1 className="detail-title">{product.name}</h1>
+          <div className="detail-rating">
+            <Rating value={product.rating} text={`${product.numReviews || 0} reviews`} />
+          </div>
+          <div className="detail-price">
+            <span>{formatCurrency(salePrice)}</span>
+            {product.onSale && Number(product.promoPrice) > 0 && (
+              <del>{formatCurrency(product.price)}</del>
+            )}
+          </div>
+          <p className="detail-description">{product.description}</p>
+
           {product.sizes?.length > 0 && (
-            <div>
-              <h3 className="h6 fw-semibold text-dark mb-3">Select Size</h3>
-              <div className="d-flex gap-2">
+            <fieldset className="variant-fieldset">
+              <legend>Choose size <span>{selectedSize || 'Required'}</span></legend>
+              <div className="variant-options">
                 {product.sizes.map((size) => (
-                  <button 
-                    key={size} 
-                    className={`btn ${selectedSize === size ? 'btn-dark' : 'btn-outline-secondary'} text-uppercase`}
+                  <button
+                    type="button"
+                    key={size}
+                    className={`variant-option${selectedSize === size ? ' is-selected' : ''}`}
                     onClick={() => setSelectedSize(size)}
+                    aria-pressed={selectedSize === size}
                   >
                     {size}
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
           )}
 
-          {/* Quantity Selection */}
-          <div className="d-flex align-items-center gap-3">
-            <h3 className="h6 fw-semibold text-dark mb-0">Quantity</h3>
+          {product.colors?.length > 0 && (
+            <fieldset className="variant-fieldset">
+              <legend>Choose colour <span>{selectedColor || 'Required'}</span></legend>
+              <div className="variant-options">
+                {product.colors.map((color) => (
+                  <button
+                    type="button"
+                    key={color}
+                    className={`variant-option${selectedColor === color ? ' is-selected' : ''}`}
+                    onClick={() => setSelectedColor(color)}
+                    aria-pressed={selectedColor === color}
+                  >
+                    {color}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          <div className="detail-purchase-row">
+            <Form.Label className="visually-hidden" htmlFor="product-quantity">Quantity</Form.Label>
             <Form.Control
-              as="select"
-              value={qty}
-              onChange={(e) => setQty(Number(e.target.value))}
-              style={{ width: '80px' }}
-            >
-              {[...Array(product.countInStock > 0 ? product.countInStock : 10).keys()].map((x) => (
-                <option key={x + 1} value={x + 1}>
-                  {x + 1}
-                </option>
+              id="product-quantity"
+              type="number"
+              min="1"
+              max={product.countInStock}
+              value={quantity}
+              onChange={(event) => setQuantity(Math.min(
+                Number(product.countInStock) || 1,
+                Math.max(1, Number(event.target.value) || 1)
               ))}
-            </Form.Control>
+              className="detail-quantity"
+              disabled={!inStock}
+            />
+            <Button className="button button-dark detail-add-button" onClick={addToBag} disabled={!inStock}>
+              <Bag aria-hidden="true" /> {inStock ? 'Add to bag' : 'Sold out'}
+            </Button>
           </div>
-          
-           <button 
-            className="btn btn-dark w-100 rounded-pill fw-bold text-uppercase py-3"
-            onClick={addToCartHandler}
-            disabled={product.countInStock === 0}
-          >
-            {product.countInStock > 0 ? 'Add to Cart' : 'Out of Stock'}
-          </button>
+
+          <div className="detail-stock">
+            {inStock ? <><Check2 aria-hidden="true" /> In stock — ready when you are</> : 'Currently out of stock'}
+          </div>
+          <div className="detail-promise"><Truck aria-hidden="true" /> Delivery and payment options shown at checkout.</div>
+          <div className="detail-description-panel">
+            <h2>A little about this piece</h2>
+            <p>{product.description}</p>
+            {product.sizes?.length > 0 && <p><strong>Available sizes:</strong> {product.sizes.join(', ')}</p>}
+            {product.colors?.length > 0 && <p><strong>Available colours:</strong> {product.colors.join(', ')}</p>}
+          </div>
         </div>
       </div>
-      <div className="my-5">
-        <ListGroup.Item className="p-4 shadow-sm rounded bg-light border-0">
-          <h2 className="mb-4 text-center text-primary fw-bold" style={{ letterSpacing: '1px' }}>Write a Customer Review</h2>
-          {userInfo ? (
-            canReview ? (
-              <Form onSubmit={submitHandler} className="review-form">
-                <Form.Group controlId='rating' className='mb-3'>
-                  <Form.Label className="fw-semibold">Rating</Form.Label>
-                  <Form.Control
-                    as='select'
-                    value={rating}
-                    onChange={(e) => setRating(e.target.value)}
-                    className="mb-2"
-                    style={{ maxWidth: '200px' }}
-                  >
-                    <option value=''>Select...</option>
-                    <option value='1'>1 - Poor</option>
-                    <option value='2'>2 - Fair</option>
-                    <option value='3'>3 - Good</option>
-                    <option value='4'>4 - Very Good</option>
-                    <option value='5'>5 - Excellent</option>
-                  </Form.Control>
-                </Form.Group>
-                <Form.Group controlId='comment' className='mb-3'>
-                  <Form.Label className="fw-semibold">Comment</Form.Label>
-                  <Form.Control
-                    as='textarea'
-                    rows={3}
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    placeholder="What did you think of the product?"
-                    className="mb-2"
-                    style={{ minHeight: '100px', resize: 'vertical' }}
-                  ></Form.Control>
-                </Form.Group>
-                <div className="d-grid">
-                  <Button type='submit' variant='primary' size="lg" className="rounded-pill fw-bold">
-                    Submit
-                  </Button>
-                </div>
-              </Form>
-            ) : (
-              <Message variant='info'>Only customers who bought this product can leave a review.</Message>
-            )
-          ) : (
-            <Message>
-              Please <Link to='/login'>sign in</Link> to write a review
-            </Message>
-          )}
-        </ListGroup.Item>
-        <Col md={6}>
-          <h2>Reviews</h2>
-          {Array.isArray(product.reviews) && product.reviews.length === 0 && <Message>No Reviews</Message>}
-          <ListGroup variant='flush'>
-            {Array.isArray(product.reviews) && product.reviews.map((review) => (
-              <ListGroup.Item key={review._id}>
-                <strong>{review.name}</strong>
+
+      <section className="reviews-section">
+        <div className="reviews-heading">
+          <div>
+            <p className="eyebrow">KIND WORDS</p>
+            <h2>Notes from our customers</h2>
+          </div>
+          <Rating value={product.rating} text={`${product.numReviews || 0} reviews`} />
+        </div>
+
+        {userInfo?.token && canReview && (
+          <Form onSubmit={submitReview} className="review-form">
+            <Form.Group className="mb-3">
+              <Form.Label>Your rating</Form.Label>
+              <Form.Select value={rating} onChange={(event) => setRating(event.target.value)} required>
+                <option value="">Choose a rating</option>
+                <option value="5">5 — Loved it</option>
+                <option value="4">4 — Really lovely</option>
+                <option value="3">3 — Just right</option>
+                <option value="2">2 — Not for me</option>
+                <option value="1">1 — Disappointed</option>
+              </Form.Select>
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Your note</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                placeholder="What should another shopper know?"
+                required
+              />
+            </Form.Group>
+            <Button type="submit" className="button button-dark">Share your review</Button>
+          </Form>
+        )}
+
+        {!product.reviews?.length ? (
+          <p className="empty-reviews">No reviews yet. Your experience could be the first.</p>
+        ) : (
+          <div className="review-grid">
+            {product.reviews.map((review) => (
+              <article className="review-card" key={review._id}>
                 <Rating value={review.rating} />
-                <p>{review.createdAt.substring(0, 10)}</p>
+                <h3>{review.name}</h3>
                 <p>{review.comment}</p>
-              </ListGroup.Item>
+                <time dateTime={review.createdAt}>
+                  {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
+                </time>
+              </article>
             ))}
-          </ListGroup>
-        </Col>
-      </div>
+          </div>
+        )}
+
+        {userInfo?.token && !canReview && (
+          <p className="empty-reviews">Verified customers can leave a review after purchase.</p>
+        )}
+        {!userInfo?.token && (
+          <p className="empty-reviews">Have this piece? <Link to="/login">Sign in</Link> to share a review.</p>
+        )}
+      </section>
     </div>
   );
 };

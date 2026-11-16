@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Row, Col, Container, Badge, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import API from '../api';
+import API, { getImageUrl } from '../api';
+import formatCurrency from '../utils/formatCurrency';
 
 const MyOrdersScreen = () => {
   const [orders, setOrders] = useState([]);
@@ -77,7 +78,7 @@ const MyOrdersScreen = () => {
                     <div className="d-flex align-items-center">
                       {order.orderItems.length > 0 && (
                         <img 
-                          src={order.orderItems[0].image} 
+                          src={getImageUrl(order.orderItems[0].image)}
                           alt="product" 
                           className="rounded me-2"
                           style={{ width: '40px', height: '40px', objectFit: 'cover' }} 
@@ -88,7 +89,7 @@ const MyOrdersScreen = () => {
                       </span>
                     </div>
                   </td>
-                  <td className="fw-bold">${order.totalPrice.toFixed(2)}</td>
+                  <td className="fw-bold">{formatCurrency(order.totalPrice)}</td>
                   <td>
                     {order.isPaid ? (
                       <Badge bg="success-subtle" className="text-success border border-success px-2 py-1 rounded-pill">

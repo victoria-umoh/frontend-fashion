@@ -3,6 +3,7 @@ import { Row, Col, Card, Container, Table, Badge, Button } from 'react-bootstrap
 import { CashStack, People, CartCheck, BoxSeam, ArrowRight } from 'react-bootstrap-icons';
 import { LinkContainer } from 'react-router-bootstrap';
 import API from '../../api';
+import formatCurrency from '../../utils/formatCurrency';
 
 const DashboardScreen = () => {
     // 1. Single state for all dashboard data
@@ -45,7 +46,7 @@ const DashboardScreen = () => {
 
     // 3. UI Card Configuration
     const cardItems = [
-        { title: 'Revenue', val: `₦${dashboardData.totalRevenue}`, icon: <CashStack />, bg: 'bg-success-light', color: 'text-success' },
+        { title: 'Revenue', val: formatCurrency(dashboardData.totalRevenue), icon: <CashStack />, bg: 'bg-success-light', color: 'text-success' },
         { title: 'Orders', val: dashboardData.totalOrders, icon: <CartCheck />, bg: 'bg-primary-light', color: 'text-primary' },
         { title: 'Users', val: dashboardData.totalUsers, icon: <People />, bg: 'bg-info-light', color: 'text-info' },
         { title: 'Products', val: dashboardData.totalProducts, icon: <BoxSeam />, bg: 'bg-warning-light', color: 'text-warning' },
@@ -71,6 +72,27 @@ const DashboardScreen = () => {
                 <h2 className="fw-bold mb-0">Business Dashboard</h2>
                 <Badge bg="dark" className="px-3 py-2">Admin View</Badge>
             </div>
+
+            <section aria-label="Admin quick actions" className="mb-4">
+                <p className="eyebrow mb-2">QUICK ACTIONS</p>
+                <div className="d-flex flex-wrap gap-2">
+                    <LinkContainer to="/admin/addproducts">
+                        <Button variant="dark">Add product</Button>
+                    </LinkContainer>
+                    <LinkContainer to="/admin/productlist">
+                        <Button variant="outline-dark">Manage products</Button>
+                    </LinkContainer>
+                    <LinkContainer to="/admin/orderlist">
+                        <Button variant="outline-dark">Manage orders</Button>
+                    </LinkContainer>
+                    <LinkContainer to="/admin/userlist">
+                        <Button variant="outline-dark">Manage users</Button>
+                    </LinkContainer>
+                    <LinkContainer to="/admin/couponlist">
+                        <Button variant="outline-dark">Manage coupons</Button>
+                    </LinkContainer>
+                </div>
+            </section>
 
             {/* Stats Cards Section */}
             <Row className="mb-5">
@@ -121,7 +143,7 @@ const DashboardScreen = () => {
                                             <div className="text-muted x-small">ID: {order._id.substring(18)}</div>
                                         </td>
                                         <td>{new Date(order.createdAt).toLocaleDateString()}</td>
-                                        <td className="fw-bold">₦{order.totalPrice.toFixed(2)}</td>
+                                        <td className="fw-bold">{formatCurrency(order.totalPrice)}</td>
                                         <td>
                                             <Badge bg={order.isPaid ? 'success-soft' : 'danger-soft'} 
                                                    className={`${order.isPaid ? 'text-success' : 'text-danger'} rounded-pill px-3`}>

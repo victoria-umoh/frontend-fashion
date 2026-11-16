@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'; // Added for navigation
 import API from '../../api';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
+import formatCurrency from '../../utils/formatCurrency';
 
 const OrderListScreen = () => {
     const [orders, setOrders] = useState([]);
@@ -113,7 +114,7 @@ const OrderListScreen = () => {
                                     {order.user ? order.user.name : <span className="text-danger small italic text-uppercase">Deleted User</span>}
                                 </td>
                                 <td>{order.createdAt?.substring(0, 10)}</td>
-                                <td className="fw-bold">${order.totalPrice.toFixed(2)}</td>
+                                <td className="fw-bold">{formatCurrency(order.totalPrice)}</td>
                                 <td>
                                     {order.isPaid ? (
                                         <Badge bg="success-subtle" className="text-success border border-success px-2 py-1 rounded-pill">
