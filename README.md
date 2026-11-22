@@ -1,6 +1,6 @@
 # Saint Victoria storefront
 
-The React storefront is hosted on Netlify and uses Supabase Auth plus the `api` Supabase Edge Function for the ecommerce API. Product images continue to use Cloudinary.
+The React storefront is configured for Netlify and uses Supabase Auth plus the `api` Supabase Edge Function for the ecommerce API. Product images continue to use Cloudinary.
 
 ## Running the app
 
