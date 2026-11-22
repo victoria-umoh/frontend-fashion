@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Bag, List, Person, XLg } from 'react-bootstrap-icons';
 import { useCart } from './context/CartContext';
+import { toast } from 'react-toastify';
+import { supabase } from '../supabase';
 
 const Navbar = () => {
   const { cartItems, clearCart } = useCart();
@@ -16,7 +18,16 @@ const Navbar = () => {
     localStorage.removeItem('userInfo');
   }
 
-  const logoutHandler = () => {
+  const logoutHandler = async () => {
+    try {
+      if (supabase) {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+      }
+    } catch (error) {
+      toast.error(error.message || 'Unable to sign out. Please try again.');
+      return;
+    }
     localStorage.removeItem('userInfo');
     clearCart();
     navigate('/login');

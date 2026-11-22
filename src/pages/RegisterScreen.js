@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import API from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Button, Row, Col, Container, Card, Alert } from 'react-bootstrap';
+import { loadProfile } from '../auth';
+import { requireSupabase } from '../supabase';
 
 const RegisterScreen = () => {
   const [name, setName] = useState('');
@@ -28,21 +29,26 @@ const RegisterScreen = () => {
       setMessage(null);
       setError(null);
       try {
-        const config = { headers: { 'Content-Type': 'application/json' } };
-        const { data } = await API.post('/api/auth/register', { name, email, password }, config);
-        if (data.token) {
-          localStorage.setItem('userInfo', JSON.stringify(data));
+        const { data, error: signupError } = await requireSupabase().auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: { name: name.trim() },
+            emailRedirectTo: `${window.location.origin}/verify-email`,
+          },
+        });
+        if (signupError) throw signupError;
+        if (data.session) {
+          const profile = await loadProfile(data.session);
+          localStorage.setItem('userInfo', JSON.stringify(profile));
           navigate('/');
         } else {
-          navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+          navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`, {
+            state: { notice: 'Check your email to verify your account.' },
+          });
         }
       } catch (err) {
-        const errorMessage = err.response?.data?.message || err.message;
-        if (err.response?.status === 503) {
-          navigate(`/verify-email?email=${encodeURIComponent(email)}`, { state: { notice: errorMessage } });
-        } else {
-          setError(errorMessage);
-        }
+        setError(err.message || 'Unable to create your account.');
       }
     }
   };

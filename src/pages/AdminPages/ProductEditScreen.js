@@ -54,7 +54,7 @@ const ProductEditScreen = () => {
             const { data } = await API.post('/api/upload', formData, {
                 headers: { Authorization: `Bearer ${userInfo.token}` },
             });
-            const imagePath = typeof data === 'string' ? data : data?.url || data?.path;
+            const imagePath = typeof data === 'string' ? data : data?.image || data?.url || data?.path;
             if (!imagePath) throw new Error('The image service returned no image URL.');
             setImage(getImageUrl(imagePath));
             swal('Success', 'Image uploaded successfully', 'success');

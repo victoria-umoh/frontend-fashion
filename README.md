@@ -1,28 +1,21 @@
-# Getting Started with Create React App
+# Saint Victoria storefront
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The React storefront is hosted on Netlify and uses Supabase Auth plus the `api` Supabase Edge Function for the ecommerce API. Product images continue to use Cloudinary.
 
 ## Running the app
 
-Start the backend from the `backend-fashion` folder:
+For local development, create a Supabase project and set these frontend environment variables (for Create React App, place them in `.env.local`):
 
-```sh
-npm run dev
+```dotenv
+REACT_APP_SUPABASE_URL=https://<project-ref>.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=<publishable-or-anon-key>
 ```
 
-Start this React app in a second terminal:
+The API base URL defaults to `<REACT_APP_SUPABASE_URL>/functions/v1`; the existing `/api/...` requests are routed to the Supabase `api` function. Set `REACT_APP_API_URL` only when using a different API URL. Never put a Supabase service-role key, Paystack secret, Cloudinary secret, or Resend key in a `REACT_APP_*` variable.
 
-```sh
-npm start
-```
+Run the app with `npm start`; build and test with `npm run build` and `npm test`. The root `netlify.toml` configures the Create React App build, Node.js 22, and SPA route fallback. Connect `victoria-umoh/frontend-fashion` to Netlify and deploy the `feature/modern-ecommerce` branch. Set `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` in Netlify's site environment variables, then allow the deployed Netlify origin and the `/verify-email` and `/reset-password` redirect paths in Supabase Auth. Set the exact deployed origin as the Edge Function `FRONTEND_URL`.
 
-The frontend connects to `http://localhost:5001` by default. The backend's `.env` file sets its port to `5001` and allows requests from `http://localhost:3000`. If the backend runs at a different URL, set `REACT_APP_API_URL` before starting the frontend.
-
-## Production deployment
-
-Set `REACT_APP_API_URL` to the public HTTPS backend origin in the frontend hosting provider before building. Do not put Paystack secret keys or email credentials in frontend variables; payment initialization and verification happen on the backend. Configure the frontend host to serve the single-page app routes `/payment/callback`, `/verify-email`, and `/reset-password` by rewriting unknown paths to `index.html`.
-
-The root `vercel.json` configures this Create React App build and its client-side route fallback. To deploy, push `feature/modern-ecommerce`, import `victoria-umoh/frontend-fashion` into Vercel, and set that branch as the production branch (otherwise it will be a preview deployment). Add `REACT_APP_API_URL` as a Vercel environment variable using the Render API's HTTPS origin, then redeploy. After both provider URLs exist, set the Render `FRONTEND_URL` to the Vercel origin. Keep all private credentials in Render, never in Vercel's `REACT_APP_*` variables.
+The older Express/Mongo deployment configuration remains as a legacy fallback; it is not the active Supabase API.
 
 ## Available Scripts
 

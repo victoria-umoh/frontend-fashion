@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Card, Col, Container, Form, Row } from 'react-bootstrap';
 import { Link, useSearchParams, useLocation } from 'react-router-dom';
-import API from '../api';
+import { requireSupabase } from '../supabase';
 
 const VerifyEmailScreen = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const token = searchParams.get('token') || '';
+  const code = searchParams.get('code') || '';
+  const tokenHash = searchParams.get('token_hash') || '';
+  const verificationType = searchParams.get('type') || 'signup';
   const [email, setEmail] = useState(searchParams.get('email') || '');
   const [message, setMessage] = useState(location.state?.notice || '');
   const [error, setError] = useState('');
@@ -14,16 +16,35 @@ const VerifyEmailScreen = () => {
   const verificationStarted = useRef(false);
 
   useEffect(() => {
-    if (!token || verificationStarted.current) return;
+    const hasCallback = code || tokenHash || window.location.hash.includes('access_token');
+    if (!hasCallback || verificationStarted.current) return;
     verificationStarted.current = true;
     setIsSubmitting(true);
-    API.post('/api/auth/verify-email', { email, token })
-      .then(({ data }) => setMessage(data.message))
-      .catch((requestError) => {
-        setError(requestError.response?.data?.message || 'Unable to verify this email.');
-      })
+    const verify = async () => {
+      const client = requireSupabase();
+      if (code) {
+        const { data, error: sessionError } = await client.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!data.session) {
+          const { error: codeError } = await client.auth.exchangeCodeForSession(code);
+          if (codeError) throw codeError;
+        }
+      } else if (tokenHash) {
+        const { error: verificationError } = await client.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: verificationType,
+        });
+        if (verificationError) throw verificationError;
+      } else {
+        const { data, error: sessionError } = await client.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!data.session) throw new Error('Unable to verify this email link.');
+      }
+      setMessage('Your email has been verified. You can now sign in.');
+    };
+    verify().catch((requestError) => setError(requestError.message || 'Unable to verify this email.'))
       .finally(() => setIsSubmitting(false));
-  }, [email, token]);
+  }, [code, tokenHash, verificationType]);
 
   const resendHandler = async (event) => {
     event.preventDefault();
@@ -31,10 +52,15 @@ const VerifyEmailScreen = () => {
     setError('');
     setIsSubmitting(true);
     try {
-      const { data } = await API.post('/api/auth/resend-verification', { email });
-      setMessage(data.message);
+      const { error: resendError } = await requireSupabase().auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: `${window.location.origin}/verify-email` },
+      });
+      if (resendError) throw resendError;
+      setMessage('If the address can be verified, a new verification email will be sent.');
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Unable to send a verification email.');
+      setError(requestError.message || 'Unable to send a verification email.');
     } finally {
       setIsSubmitting(false);
     }
@@ -49,7 +75,7 @@ const VerifyEmailScreen = () => {
               <h1 className="h3 text-center fw-bold mb-4">Verify your email</h1>
               {message && <Alert variant={location.state?.notice ? 'warning' : 'success'}>{message}</Alert>}
               {error && <Alert variant="danger">{error}</Alert>}
-              {token ? (
+              {code || tokenHash ? (
                 isSubmitting && <p className="text-center">Verifying your email…</p>
               ) : (
                 <>

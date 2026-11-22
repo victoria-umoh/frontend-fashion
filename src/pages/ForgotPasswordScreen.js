@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, Button, Card, Col, Container, Form, Row } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
-import API from '../api';
+import { requireSupabase } from '../supabase';
 
 const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
@@ -15,10 +15,13 @@ const ForgotPasswordScreen = () => {
     setError('');
     setIsSubmitting(true);
     try {
-      const { data } = await API.post('/api/auth/forgot-password', { email });
-      setMessage(data.message);
+      const { error: requestError } = await requireSupabase().auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (requestError) throw requestError;
+      setMessage('If an account exists for that email, a password reset link will be sent.');
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Unable to request a password reset.');
+      setError(requestError.message || 'Unable to request a password reset.');
     } finally {
       setIsSubmitting(false);
     }

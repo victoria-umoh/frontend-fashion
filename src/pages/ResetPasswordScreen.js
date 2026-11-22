@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, Container, Form, Row } from 'react-bootstrap';
-import { Link, useSearchParams } from 'react-router-dom';
-import API from '../api';
+import { Link } from 'react-router-dom';
+import { requireSupabase } from '../supabase';
 
 const ResetPasswordScreen = () => {
-  const [searchParams] = useSearchParams();
-  const email = searchParams.get('email') || '';
-  const token = searchParams.get('token') || '';
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasRecoverySession, setHasRecoverySession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let subscription;
+    try {
+      const client = requireSupabase();
+      client.auth.getSession().then(({ data, error: sessionError }) => {
+        if (sessionError) setError(sessionError.message);
+        setHasRecoverySession(Boolean(data.session));
+        setIsCheckingSession(false);
+      }).catch((sessionError) => {
+        setError(sessionError.message || 'Unable to validate the password reset link.');
+        setIsCheckingSession(false);
+      });
+      subscription = client.auth.onAuthStateChange((_event, session) => {
+        setHasRecoverySession(Boolean(session));
+        setIsCheckingSession(false);
+      }).data.subscription;
+    } catch (sessionError) {
+      setError(sessionError.message);
+      setIsCheckingSession(false);
+    }
+    return () => subscription?.unsubscribe();
+  }, []);
 
   const submitHandler = async (event) => {
     event.preventDefault();
@@ -24,10 +46,18 @@ const ResetPasswordScreen = () => {
 
     setIsSubmitting(true);
     try {
-      const { data } = await API.post('/api/auth/reset-password', { email, token, password });
-      setMessage(data.message);
+      const client = requireSupabase();
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session) throw new Error('This password reset link is invalid or has expired.');
+      const { error: updateError } = await client.auth.updateUser({ password });
+      if (updateError) throw updateError;
+      await client.auth.signOut();
+      localStorage.removeItem('userInfo');
+      setHasRecoverySession(false);
+      setMessage('Your password has been updated. Sign in with your new password.');
     } catch (requestError) {
-      setError(requestError.response?.data?.message || 'Unable to reset your password.');
+      setError(requestError.message || 'Unable to reset your password.');
     } finally {
       setIsSubmitting(false);
     }
@@ -42,7 +72,9 @@ const ResetPasswordScreen = () => {
               <h1 className="h3 text-center fw-bold mb-4">Choose a new password</h1>
               {message && <Alert variant="success">{message} <Link to="/login">Sign in</Link></Alert>}
               {error && <Alert variant="danger">{error}</Alert>}
-              {!message && (!email || !token ? (
+              {!message && (isCheckingSession ? (
+                <p className="text-center">Checking your reset link…</p>
+              ) : !hasRecoverySession ? (
                 <Alert variant="warning">This reset link is incomplete or invalid.</Alert>
               ) : (
                 <Form onSubmit={submitHandler}>
