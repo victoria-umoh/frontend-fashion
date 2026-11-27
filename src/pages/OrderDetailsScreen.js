@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Container, Row, Col, ListGroup, Image, Card, Badge } from 'react-bootstrap';
-import API from '../api';
+import API, { getImageUrl } from '../api';
+import formatCurrency from '../utils/formatCurrency';
 
 const OrderDetailsScreen = () => {
     const { id: orderId } = useParams();
@@ -72,13 +73,14 @@ const OrderDetailsScreen = () => {
                                 <h5 className="fw-bold mb-4 text-primary">Order Items</h5>
                                 {order.orderItems.map((item, index) => (
                                     <Row key={index} className="align-items-center mb-3 border-bottom pb-2">
-                                        <Col xs={2}><Image src={item.image} alt={item.name} fluid rounded /></Col>
+                                        <Col xs={2}><Image src={getImageUrl(item.image)} alt={item.name} fluid rounded /></Col>
                                         <Col>
                                             <div className="fw-bold">{item.name}</div>
                                             {item.size && <Badge bg="light" text="dark" className="border">Size: {item.size}</Badge>}
+                                            {item.color && <Badge bg="light" text="dark" className="border ms-2">Colour: {item.color}</Badge>}
                                         </Col>
                                         <Col xs={5} className="text-end">
-                                            {item.qty} x ${item.price.toFixed(2)} = <strong>${(item.qty * item.price).toFixed(2)}</strong>
+                                            {item.qty} × {formatCurrency(item.price)} = <strong>{formatCurrency(item.qty * item.price)}</strong>
                                         </Col>
                                     </Row>
                                 ))}
@@ -92,27 +94,27 @@ const OrderDetailsScreen = () => {
                     <Card className="border-0 shadow-sm p-4 bg-dark text-white rounded-4 sticky-top" style={{ top: '20px' }}>
                         <h4 className="fw-bold mb-4 border-bottom pb-2">Summary</h4>
                         <div className="d-flex justify-content-between mb-2">
-                            <span>Subtotal</span><span>${order.itemsPrice.toFixed(2)}</span>
+                            <span>Subtotal</span><span>{formatCurrency(order.itemsPrice)}</span>
                         </div>
 
                         {/* NEW: Show Coupon Deduction if it exists */}
-                        {order.discountPrice > 0 && (
+                        {order.discountAmount > 0 && (
                             <div className="d-flex justify-content-between mb-2 text-success fw-bold">
-                                <span>Discount {order.appliedCoupon && `(${order.appliedCoupon})`}</span>
-                                <span>-${order.discountPrice.toFixed(2)}</span>
+                                <span>Discount {order.couponCode && `(${order.couponCode})`}</span>
+                                <span>-{formatCurrency(order.discountAmount)}</span>
                             </div>
                         )}
 
                         <div className="d-flex justify-content-between mb-2">
-                            <span>Shipping</span><span>${order.shippingPrice.toFixed(2)}</span>
+                            <span>Shipping</span><span>{formatCurrency(order.shippingPrice)}</span>
                         </div>
                         <div className="d-flex justify-content-between mb-2">
-                            <span>Tax</span><span>${order.taxPrice.toFixed(2)}</span>
+                            <span>Tax</span><span>{formatCurrency(order.taxPrice)}</span>
                         </div>
                         <hr className="bg-light" />
                         <div className="d-flex justify-content-between mb-0 h4 fw-bold">
                             <span>Total</span>
-                            <span className="text-info">${order.totalPrice.toFixed(2)}</span>
+                            <span className="text-info">{formatCurrency(order.totalPrice)}</span>
                         </div>
                     </Card>
                 </Col>

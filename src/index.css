@@ -1,33 +1,56 @@
+:root {
+  --color-paper: #fbfaf8;
+  --color-surface: #f3efeb;
+  --color-sand: #e7ddd4;
+  --color-ink: #282522;
+  --color-muted: #77716c;
+  --color-rose: #9c625b;
+  --color-gold: #b48b4e;
+  --color-line: #e6e0da;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Iowan Old Style', 'Baskerville', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
-.transition-all {
-  transition: all 0.3s ease-in-out;
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }
 
-.nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #fff !important;
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-rose);
+  outline-offset: 3px;
 }
 
-.tracking-widest {
-  letter-spacing: 0.1em;
-}
-
-/* Ensure the sidebar stays fixed while content scrolls */
-.min-vh-100 {
-  position: sticky;
-  top: 0;
+::selection {
+  background: #e9d2cd;
+  color: var(--color-ink);
 }
 

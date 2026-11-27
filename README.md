@@ -1,6 +1,21 @@
-# Getting Started with Create React App
+# Saint Victoria storefront
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The React storefront is configured for Netlify and uses Supabase Auth plus the `api` Supabase Edge Function for the ecommerce API. Product images continue to use Cloudinary.
+
+## Running the app
+
+For local development, create a Supabase project and set these frontend environment variables (for Create React App, place them in `.env.local`):
+
+```dotenv
+REACT_APP_SUPABASE_URL=https://<project-ref>.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=<publishable-or-anon-key>
+```
+
+The API base URL defaults to `<REACT_APP_SUPABASE_URL>/functions/v1`; the existing `/api/...` requests are routed to the Supabase `api` function. Set `REACT_APP_API_URL` only when using a different API URL. Never put a Supabase service-role key, Paystack secret, Cloudinary secret, or Resend key in a `REACT_APP_*` variable.
+
+Run the app with `npm start`; build and test with `npm run build` and `npm test`. The root `netlify.toml` configures the Create React App build, Node.js 22, and SPA route fallback. Connect `victoria-umoh/frontend-fashion` to Netlify and deploy the `feature/modern-ecommerce` branch. Set `REACT_APP_SUPABASE_URL` and `REACT_APP_SUPABASE_ANON_KEY` in Netlify's site environment variables, then allow the deployed Netlify origin and the `/verify-email` and `/reset-password` redirect paths in Supabase Auth. Set the exact deployed origin as the Edge Function `FRONTEND_URL`.
+
+The older Express/Mongo deployment configuration remains as a legacy fallback; it is not the active Supabase API.
 
 ## Available Scripts
 

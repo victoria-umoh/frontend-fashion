@@ -1,17 +1,31 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Row, Col, ListGroup, Image, Card, Container, Form, InputGroup, Badge } from 'react-bootstrap';
+import { Alert, Button, Row, Col, ListGroup, Image, Card, Container, Form, InputGroup, Badge } from 'react-bootstrap';
 import { useCart } from '../components/context/CartContext';
 import CheckoutSteps from '../components/CheckoutSteps';
-import API from '../api';
+import API, { getImageUrl } from '../api';
 import swal from 'sweetalert';
 import { toast } from 'react-toastify';
-import PaystackPop from '@paystack/inline-js';
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
+import formatCurrency from '../utils/formatCurrency';
+
+const readStoredValue = (key) => {
+  try {
+    return JSON.parse(localStorage.getItem(key) || 'null');
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+};
 
 const PlaceOrderScreen = () => {
   const { cartItems, clearCart } = useCart();
   const navigate = useNavigate();
+  const [shippingAddress] = useState(() => readStoredValue('shippingAddress'));
+  const [userInfo] = useState(() => readStoredValue('userInfo'));
+  const hasShippingAddress = Boolean(
+    shippingAddress?.address && shippingAddress?.city
+      && shippingAddress?.postalCode && shippingAddress?.country
+  );
 
   const [paymentMethod, setPaymentMethod] = useState('Paystack');
   const [isPlacing, setIsPlacing] = useState(false);
@@ -20,146 +34,102 @@ const PlaceOrderScreen = () => {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState('');
+  const checkoutItems = useMemo(() => cartItems.map((item) => ({
+    product: item._id,
+    qty: item.qty,
+    size: item.size,
+    color: item.color,
+  })), [cartItems]);
 
-  const shippingAddress = JSON.parse(localStorage.getItem('shippingAddress'));
-  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-
-  // --- Optimized Price Calculations ---
-  const { itemsPrice, discountPrice, shippingPrice, taxPrice, totalPrice } = useMemo(() => {
-    const toNum = (num) => Number((Math.round(num * 100) / 100).toFixed(2));
-    
-    // Calculate subtotal using promoPrice if item is on sale
-    const sub = cartItems.reduce((acc, item) => {
-      const price = item.onSale ? item.promoPrice : item.price;
-      return acc + price * item.qty;
-    }, 0);
-
-    // Use discountAmount from backend if available
-    let discount = 0;
-    if (appliedCoupon) {
-      if (typeof appliedCoupon.discountAmount === 'number') {
-        discount = toNum(appliedCoupon.discountAmount);
-      } else if (typeof appliedCoupon.discount === 'number') {
-        discount = toNum((appliedCoupon.discount / 100) * sub);
-      }
+  useEffect(() => {
+    if (!userInfo?.token) {
+      navigate('/login', { replace: true });
+    } else if (!hasShippingAddress) {
+      navigate('/shipping', { replace: true });
+    } else if (cartItems.length === 0) {
+      navigate('/cart', { replace: true });
     }
-    const shipping = sub > 100 ? 0 : 10;
-    const tax = toNum(0.15 * (sub - discount));
-    const total = toNum(sub - discount + shipping + tax);
+  }, [cartItems.length, hasShippingAddress, navigate, userInfo]);
 
-    return { itemsPrice: toNum(sub), discountPrice: discount, shippingPrice: shipping, taxPrice: tax, totalPrice: total };
-  }, [cartItems, appliedCoupon]);
+  useEffect(() => {
+    if (!userInfo?.token || checkoutItems.length === 0) return undefined;
+    let active = true;
+    setQuote(null);
+    setQuoteError('');
+    API.post('/api/orders/quote', {
+      orderItems: checkoutItems,
+      couponCode: appliedCoupon?.name,
+    }, {
+      headers: { Authorization: `Bearer ${userInfo.token}` },
+    }).then(({ data }) => {
+      if (active) setQuote(data);
+    }).catch((error) => {
+      if (active) setQuoteError(error.response?.data?.message || 'Unable to calculate your order total.');
+    });
+    return () => {
+      active = false;
+    };
+  }, [appliedCoupon?.name, checkoutItems, userInfo?.token]);
+
+  const itemsPrice = quote?.itemsPrice || 0;
+  const discountPrice = quote?.discountAmount || 0;
+  const shippingPrice = quote?.shippingPrice || 0;
+  const taxPrice = quote?.taxPrice || 0;
+  const totalPrice = quote?.totalPrice || 0;
 
   const applyCouponHandler = async () => {
     if (!couponCode) return;
     setIsApplying(true);
     try {
-      const config = { headers: { Authorization: `Bearer ${userInfo?.token}` } };
-      // Send cartTotal to backend for accurate discount calculation
-      const { data } = await API.post('/api/coupons/validate', { name: couponCode, cartTotal: itemsPrice }, config);
-      setAppliedCoupon(data);
-      swal("Applied!", `${data.discount}% discount has been added.`, "success");
+      const { data } = await API.post('/api/orders/quote', {
+        orderItems: checkoutItems,
+        couponCode,
+      }, {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+      });
+      setQuote(data);
+      setAppliedCoupon({ name: data.couponCode, discount: data.discountPercent });
+      swal('Applied!', `${data.discountPercent}% discount has been added.`, 'success');
     } catch (err) {
-      swal("Error", err.response?.data?.message || "Invalid Code", "error");
+      swal('Error', err.response?.data?.message || 'Invalid code', 'error');
     } finally {
       setIsApplying(false);
     }
   };
 
-  const createOrderRecord = async (paymentDetails = {}) => {
-  try {
-    const config = {
-      headers: { 
-        'Content-Type': 'application/json', 
-        Authorization: `Bearer ${userInfo.token}` 
-      },
-    };
-
-    const { data } = await API.post('/api/orders', {
-      orderItems: cartItems.map(item => ({
-        name: item.name,
-        qty: item.qty,
-        image: item.image,
-        price: item.onSale ? item.promoPrice : item.price,
-        size: item.size,
-        product: item._id,
-      })),
-      shippingAddress,
-      paymentMethod,
-      couponCode: appliedCoupon?.name, 
-      itemsPrice,
-      discountPrice,
-      shippingPrice,
-      taxPrice,
-      totalPrice,
-      isPaid: paymentMethod !== 'COD',
-      paymentResult: paymentDetails,
-    }, config);
-
-    return data;
-  } catch (err) {
-    // PLACE IT HERE
-    const message = err.response?.data.message || 'Error placing order';
-    toast.error(message); // Displays the "Out of Stock" or "Server Error" message
-    
-    return null; // Prevents the rest of the flow (like clearing cart) from running
-  }
-};
-
-
-
-  const handlePaystack = () => {
-    const handler = new PaystackPop();
-    
-    handler.newTransaction({
-      key: 'pk_test_06a68fcb115734baf1107749edcd6773bb881c1e',
-      email: userInfo.email,
-      amount: Math.round(totalPrice * 100), // NGN Conversion
-      currency: 'NGN',
-      // DO NOT use an async function directly here
-      onSuccess: (transaction) => {
-        // transaction contains { message: "Approved", reference: "..." }
-        completeOrderAfterPayment(transaction);
-      },
-      onCancel: () => {
-        swal("Cancelled", "Payment window closed", "info");
-        setIsPlacing(false);
-      },
-    });
+  const orderPayload = {
+    orderItems: checkoutItems,
+    shippingAddress,
+    couponCode: appliedCoupon?.name,
   };
 
-  // 2. Separate function to handle the API call
-  const completeOrderAfterPayment = async (response) => {
+  const handlePlaceOrder = async () => {
+    setIsPlacing(true);
     try {
-      setIsPlacing(true);
-      const order = await createOrderRecord({ 
-        id: response.reference, 
-        status: 'success' 
-      });
-      
-      if (order) {
+      const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+      if (paymentMethod === 'COD') {
+        const { data: order } = await API.post('/api/orders', {
+          ...orderPayload,
+          paymentMethod: 'COD',
+        }, config);
         clearCart();
-        navigate('/success', { state: { orderId: order._id } });
+        navigate('/success', { state: { orderId: order._id, paymentMethod: 'COD' } });
+      } else {
+        const { data } = await API.post('/api/payments/initialize', orderPayload, config);
+        window.location.assign(data.authorizationUrl);
       }
     } catch (error) {
-      toast.error("Payment successful, but order creation failed. Please contact support.");
+      toast.error(error.response?.data?.message || 'Unable to place your order.');
     } finally {
       setIsPlacing(false);
     }
   };
-  const handlePlaceOrder = async () => {
-    setIsPlacing(true);
-    if (paymentMethod === 'COD') {
-      const order = await createOrderRecord();
-      if (order) {
-          clearCart();
-          navigate('/success', { state: { orderId: order._id } });
-      }
-    } else if (paymentMethod === 'Paystack') {
-      handlePaystack();
-    }
-    setIsPlacing(false);
-  };
+
+  if (!userInfo?.token || !hasShippingAddress || cartItems.length === 0) {
+    return null;
+  }
 
   return (
     <Container className="py-4">
@@ -167,15 +137,15 @@ const PlaceOrderScreen = () => {
       <Row>
         <Col md={8}>
           <ListGroup variant='flush'>
-            <Card className="border-0 shadow-sm mb-3 rounded-4 p-3">
+            <Card className="commerce-card mb-3 p-3">
               <h5 className="fw-bold text-uppercase mb-2 text-primary">1. Delivery Address</h5>
               <p className="text-muted mb-0">{shippingAddress.address}, {shippingAddress.city}, {shippingAddress.country}</p>
             </Card>
 
-            <Card className="border-0 shadow-sm mb-3 rounded-4 p-3">
+            <Card className="commerce-card mb-3 p-3">
               <h5 className="fw-bold text-uppercase mb-3 text-primary">2. Payment Method</h5>
               <div className="d-flex gap-4">
-                {['Paystack', 'PayPal', 'COD'].map((method) => (
+                {['Paystack', 'COD'].map((method) => (
                   <Form.Check 
                     key={method}
                     type='radio' 
@@ -190,16 +160,17 @@ const PlaceOrderScreen = () => {
               </div>
             </Card>
 
-            <Card className="border-0 shadow-sm rounded-4 p-3">
+            <Card className="commerce-card p-3">
               <h5 className="fw-bold text-uppercase mb-3 text-primary">3. Review Items</h5>
-              {cartItems.map((item, index) => (
+              {(quote?.orderItems || cartItems).map((item, index) => (
                 <Row key={index} className="align-items-center mb-3">
-                  <Col xs={2}><Image src={item.image} alt={item.name} fluid rounded /></Col>
+                  <Col xs={2}><Image src={getImageUrl(item.image)} alt={item.name} fluid rounded /></Col>
                   <Col className="fw-bold">
                     {item.name}
                     {item.size && <Badge bg="info" text="dark" className="ms-2">Size: {item.size}</Badge>}
+                    {item.color && <Badge bg="light" text="dark" className="ms-2">Colour: {item.color}</Badge>}
                   </Col>
-                  <Col xs={4} className="text-end">{item.qty} x ₦{item.onSale ? item.promoPrice : item.price}</Col>
+                  <Col xs={4} className="text-end">{item.qty} × {formatCurrency(item.price)}</Col>
                 </Row>
               ))}
             </Card>
@@ -218,11 +189,11 @@ const PlaceOrderScreen = () => {
                         placeholder="Enter Code" 
                         value={couponCode}
                         onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        disabled={appliedCoupon}
+                        disabled={Boolean(appliedCoupon)}
                     />
                     <Button 
                         variant={appliedCoupon ? "success" : "dark"} 
-                        onClick={appliedCoupon ? () => {setAppliedCoupon(null); setCouponCode('')} : applyCouponHandler}
+                        onClick={appliedCoupon ? () => { setAppliedCoupon(null); setCouponCode(''); } : applyCouponHandler}
                         disabled={isApplying}
                     >
                         {appliedCoupon ? 'REMOVE' : (isApplying ? '...' : 'APPLY')}
@@ -230,50 +201,33 @@ const PlaceOrderScreen = () => {
                 </InputGroup>
             </div>
 
-            <div className="d-flex justify-content-between mb-2"><span>Subtotal</span><span>₦{itemsPrice}</span></div>
+            {quoteError && <Alert variant="danger">{quoteError}</Alert>}
+            {!quote && !quoteError && <p className="small text-muted">Calculating your order total…</p>}
+            <div className="d-flex justify-content-between mb-2"><span>Subtotal</span><span>{formatCurrency(itemsPrice)}</span></div>
 
             {appliedCoupon && (
                 <div className="d-flex justify-content-between mb-2 text-success fw-bold">
                     <span>Discount ({appliedCoupon.discount}%)</span>
-                    <span>-₦{discountPrice}</span>
+                    <span>-{formatCurrency(discountPrice)}</span>
                 </div>
             )}
 
-            <div className="d-flex justify-content-between mb-2"><span>Shipping</span><span>₦{shippingPrice}</span></div>
-            <div className="d-flex justify-content-between mb-2"><span>Tax (15%)</span><span>₦{taxPrice}</span></div>
+            <div className="d-flex justify-content-between mb-2"><span>Shipping</span><span>{formatCurrency(shippingPrice)}</span></div>
+            <div className="d-flex justify-content-between mb-2"><span>Tax</span><span>{formatCurrency(taxPrice)}</span></div>
             
             <div className="d-flex justify-content-between mb-4 fw-bold h4 pt-3 border-top">
                 <span>Total</span>
-                <span className="text-primary">₦{totalPrice}</span>
+                <span className="text-primary">{formatCurrency(totalPrice)}</span>
             </div>
 
-            {paymentMethod === 'PayPal' ? (
-              <PayPalScriptProvider options={{ "client-id": "YOUR_PAYPAL_CLIENT_ID", components: "buttons" }}>
-                <PayPalButtons 
-                  style={{ layout: "vertical", shape: "pill" }}
-                  createOrder={(data, actions) => actions.order.create({ 
-                    purchase_units: [{ amount: { value: totalPrice.toString() } }] 
-                  })}
-                  onApprove={async (data, actions) => {
-                    const details = await actions.order.capture();
-                    const order = await createOrderRecord(details);
-                    if (order) {
-                        clearCart();
-                        navigate('/success', { state: { orderId: order._id } });
-                    }
-                  }}
-                />
-              </PayPalScriptProvider>
-            ) : (
-              <Button 
-                variant="dark"
-                className='w-100 py-3 rounded-pill fw-bold' 
-                onClick={handlePlaceOrder}
-                disabled={isPlacing || cartItems.length === 0}
-              >
-                {isPlacing ? 'PROCESSING...' : (paymentMethod === 'COD' ? 'PLACE ORDER (COD)' : `PAY ₦${totalPrice}`)}
-              </Button>
-            )}
+            <Button
+              variant="dark"
+              className='w-100 py-3 rounded-pill fw-bold'
+              onClick={handlePlaceOrder}
+              disabled={isPlacing || !quote || Boolean(quoteError) || cartItems.length === 0}
+            >
+              {isPlacing ? 'PROCESSING...' : (paymentMethod === 'COD' ? 'PLACE ORDER (COD)' : `PAY ${formatCurrency(totalPrice)}`)}
+            </Button>
           </Card>
         </Col>
       </Row>

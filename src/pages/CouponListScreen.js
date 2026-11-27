@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Table, Button, Form, Row, Col } from 'react-bootstrap';
-import axios from 'axios';
+import API from '../api';
 
 const CouponListScreen = () => {
   const [coupons, setCoupons] = useState([]);
@@ -19,19 +19,19 @@ const CouponListScreen = () => {
   }), [userInfo?.token]);
 
   const fetchCoupons = useCallback(async () => {
-    const { data } = await axios.get('/api/coupons', config);
+    const { data } = await API.get('/api/coupons', config);
     setCoupons(data);
   }, [config]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
-    await axios.post('/api/coupons', { name, discount, expiry }, config);
+    await API.post('/api/coupons', { name, discount, expiry }, config);
     fetchCoupons(); // Refresh list
   };
 
   const deleteHandler = async (id) => {
     if (window.confirm('Are you sure?')) {
-      await axios.delete(`/api/coupons/${id}`, config);
+      await API.delete(`/api/coupons/${id}`, config);
       fetchCoupons();
     }
   };

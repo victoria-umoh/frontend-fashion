@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Row, Col, Card, Container } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
-import API from '../api';
+import API, { getImageUrl } from '../api';
 import { PersonCircle, BagCheck, BoxSeam } from 'react-bootstrap-icons';
+import formatCurrency from '../utils/formatCurrency';
 
 const ProfileScreen = () => {
     const [orders, setOrders] = useState([]);
@@ -85,7 +86,7 @@ const ProfileScreen = () => {
                                           <td>
                                             {order.orderItems && order.orderItems.length > 0 && (
                                               <img 
-                                                src={order.orderItems[0].image} 
+                                                src={getImageUrl(order.orderItems[0].image)}
                                                 alt={order.orderItems[0].name || 'product'} 
                                                 style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '5px' }} 
                                                 onError={(e) => {e.target.src = '/fallback-image.png'}}
@@ -95,7 +96,7 @@ const ProfileScreen = () => {
                                           <td>{order.orderItems ? order.orderItems.reduce((sum, item) => sum + item.qty, 0) : 0}</td>
                                           <td>{order.orderItems ? order.orderItems.map(item => item.size || '-').join(', ') : '-'}</td>
                                           <td>{order.paymentMethod || '-'}</td>
-                                          <td className="fw-bold">${order.totalPrice}</td>
+                                          <td className="fw-bold">{formatCurrency(order.totalPrice)}</td>
                                           <td>
                                               {order.isPaid ? (
                                                   <span className="text-success">{order.paidAt ? new Date(order.paidAt).toLocaleString() : 'Paid'}</span>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import API from '../api';
 import { useCart } from '../components/context/CartContext';
 import { Container, Row, Col, Form, Button, Card, Alert } from 'react-bootstrap';
+import { loadProfile } from '../auth';
+import { requireSupabase } from '../supabase';
 
 
 const LoginScreen = () => {
@@ -13,33 +14,64 @@ const LoginScreen = () => {
   const navigate = useNavigate();
   const { loadCart } = useCart();
 
-  // Check if user is already logged in
   useEffect(() => {
-    const userInfo = localStorage.getItem('userInfo');
-    if (userInfo) {
-      navigate('/'); // Redirect to home if already logged in
-    }
+    let active = true;
+    const restoreSession = async () => {
+      try {
+        const { data, error: sessionError } = await requireSupabase().auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!data.session) {
+          localStorage.removeItem('userInfo');
+          return;
+        }
+        const profile = await loadProfile(data.session);
+        if (!active) return;
+        localStorage.setItem('userInfo', JSON.stringify(profile));
+        navigate('/');
+      } catch (sessionError) {
+        if (active) setError(sessionError.message || 'Unable to restore your session.');
+      }
+    };
+    restoreSession();
+    return () => {
+      active = false;
+    };
   }, [navigate]);
 
   const submitHandler = async (e) => {
     e.preventDefault();
     try {
-      const config = { headers: { 'Content-Type': 'application/json' } };
-      const { data } = await API.post('/api/auth/login', { email, password }, config);
-      // const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password }, config);
-      
-      // Save user info (including JWT token) to localStorage
-      localStorage.setItem('userInfo', JSON.stringify(data));
-      
-      // Load user's saved cart
-      const savedCart = localStorage.getItem('cart_' + data.id);
+      setError(null);
+      const { data, error: loginError } = await requireSupabase().auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (loginError) throw loginError;
+      const profile = await loadProfile(data.session);
+      if (profile.mustResetPassword) {
+        const { error: resetError } = await requireSupabase().auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        await requireSupabase().auth.signOut();
+        if (resetError) throw resetError;
+        setError('Your account needs a new password. Check your email for a reset link.');
+        return;
+      }
+      if (!profile.isVerified) {
+        await requireSupabase().auth.signOut();
+        setError('Verify your email before signing in. Use the link in your inbox or resend it below.');
+        return;
+      }
+
+      localStorage.setItem('userInfo', JSON.stringify(profile));
+      const savedCart = localStorage.getItem(`cart_${profile.legacyId || profile.id}`)
+        || localStorage.getItem(`cart_${profile.id}`);
       if (savedCart) {
         loadCart(JSON.parse(savedCart));
       }
-      
-      navigate('/'); // Redirect to home
+      navigate('/');
     } catch (err) {
-      setError(err.response && err.response.data.message ? err.response.data.message : err.message);
+      setError(err.response?.data?.message || err.message || 'Unable to sign in.');
     }
   };
 
@@ -47,7 +79,7 @@ const LoginScreen = () => {
     <Container className="py-5">
       <Row className="justify-content-center">
         <Col md={6} lg={5}>
-          <Card className="shadow-sm border-0">
+          <Card className="auth-card">
             <Card.Body className="p-4">
               <h2 className="text-center fw-bold mb-4">Sign In</h2>
 
@@ -77,6 +109,9 @@ const LoginScreen = () => {
                   />
                 </Form.Group>
 
+                <div className="text-end mb-3">
+                  <Link to="/forgot-password" className="small">Forgot password?</Link>
+                </div>
                 <Button
                   type="submit"
                   variant="dark"
@@ -92,6 +127,11 @@ const LoginScreen = () => {
                   Register
                 </Link>
               </div>
+              {error?.toLowerCase().includes('verify your email') && (
+                <div className="text-center mt-2">
+                  <Link to={`/verify-email?email=${encodeURIComponent(email)}`}>Resend verification email</Link>
+                </div>
+              )}
             </Card.Body>
           </Card>
         </Col>

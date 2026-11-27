@@ -1,43 +1,48 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Card } from 'react-bootstrap';
+import { getImageUrl } from '../api';
 import Rating from '../pages/Rating';
+import formatCurrency from '../utils/formatCurrency';
 
 
 const ProductCard = ({ product }) => {
+  const isOnSale = product.onSale && Number(product.promoPrice) > 0;
+  const price = isOnSale ? product.promoPrice : product.price;
+
   return (
-    <Card className='my-3 p-3 rounded d-flex flex-column'>
-      <Link to={`/product/${product._id}`}> 
-        <Card.Img 
-          src={product.image} 
-          variant='top' 
-          className='card-img-top' 
-          style={{ height: '300px', objectFit: 'cover' }} 
-        />
+    <article className="product-card">
+      <Link className="product-image-link" to={`/product/${product._id}`} aria-label={`View ${product.name}`}>
+        <div className="product-image-frame">
+          <img
+            src={getImageUrl(product.image)}
+            alt={`${product.name}${product.brand ? ` by ${product.brand}` : ''}`}
+            className="product-image"
+            loading="lazy"
+            decoding="async"
+          />
+          {isOnSale && <span className="product-badge">A little less</span>}
+          {Number(product.countInStock) === 0 && <span className="product-badge product-badge-muted">Sold out</span>}
+        </div>
       </Link>
-      <Card.Body className='d-flex flex-column'>
-        <Link title={product.name} to={`/product/${product._id}`} className='text-underline-none'>
-          <Card.Title as='div'>
-            <strong>{product.name}</strong>
-          </Card.Title>
+      <div className="product-card-content">
+        <div className="product-card-meta">
+          <span>{product.category}</span>
+          <Rating value={product.rating} text={product.numReviews ? `(${product.numReviews})` : ''} />
+        </div>
+        <Link title={product.name} to={`/product/${product._id}`} className="product-title-link">
+          <h3>{product.name}</h3>
         </Link>
-        <Card.Text as='h3' className='mt-auto'>
-          {product.onSale ? (
-            <>
-              <span className="text-danger">₦{product.promoPrice}</span>
-              <del className="text-muted ms-2" style={{ fontSize: '1rem' }}>
-                ₦{product.price}
-              </del>
-            </>
-          ) : (
-            `₦${product.price}`
-          )}
-        </Card.Text>
-        <Card.Text as='p'>
-          <Rating value={product.rating} text={`${product.numReviews} reviews`} />
-        </Card.Text>
-      </Card.Body>
-    </Card>
+        <div className="product-card-bottom">
+          <div className="product-price">
+            <span>{formatCurrency(price)}</span>
+            {isOnSale && <del>{formatCurrency(product.price)}</del>}
+          </div>
+          <Link to={`/product/${product._id}`} className="product-view-link">
+            Discover <span aria-hidden="true">↗</span>
+          </Link>
+        </div>
+      </div>
+    </article>
   );
 };
 

@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Row, Col, Container, Modal } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
 import { PencilSquare, Trash, Plus } from 'react-bootstrap-icons';
-import API from '../../api';
+import API, { getImageUrl } from '../../api';
 import swal from 'sweetalert';
 import Swal from 'sweetalert2';
+import formatCurrency from '../../utils/formatCurrency';
 
 
 const ProductListScreen = () => {
@@ -87,20 +88,20 @@ const ProductListScreen = () => {
                               {product.onSale ? (
                                 <>
                                   <span style={{ textDecoration: 'line-through', color: '#999' }}>
-                                    ₦{Number(product.price).toFixed(2)}
+                                    {formatCurrency(product.price)}
                                   </span>
                                   <span style={{ color: 'red', marginLeft: '10px' }}>
-                                    ₦{Number(product.promoPrice).toFixed(2)}
+                                    {formatCurrency(product.promoPrice)}
                                   </span>
                                 </>
                               ) : (
-                                <span>₦{Number(product.price).toFixed(2)}</span>
+                                <span>{formatCurrency(product.price)}</span>
                               )}
                             </td>
                             <td>{product.category}</td>
                             <td>{product.brand}</td>
                             <td>{product.sizes.join(', ')}</td>
-                            <td><img src={product.image} alt={product.name} style={{ width: '50px', height: '50px', objectFit: 'cover' }} /></td>
+                            <td><img src={getImageUrl(product.image)} alt={product.name} style={{ width: '50px', height: '50px', objectFit: 'cover' }} /></td>
                             <td className="text-center">
                                 <LinkContainer to={`/admin/product/${product._id}/edit`}>
                                     <Button variant="light" size="sm" className="me-2 rounded-circle">

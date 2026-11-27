@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Button, Container, Row, Col } from 'react-bootstrap';
-import API from '../../api';
+import API, { getImageUrl } from '../../api';
 import { toast } from 'react-toastify';
 
 const ProductCreateScreen = () => {
@@ -10,6 +10,7 @@ const ProductCreateScreen = () => {
   const [image, setImage] = useState('');
   const [brand, setBrand] = useState('');
   const [sizes, setSizes] = useState([]);
+  const [colors, setColors] = useState([]);
   const [category, setCategory] = useState('');
   const [countInStock, setCountInStock] = useState(0);
   const [description, setDescription] = useState('');
@@ -17,46 +18,32 @@ const ProductCreateScreen = () => {
 
   const navigate = useNavigate();
 
- const uploadFileHandler = async (e) => {
-  const file = e.target.files[0];
-  const formData = new FormData();
-  formData.append('image', file);
-  setUploading(true);
+  const uploadFileHandler = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  try {
-    // 1. Get user info (and the token) from localStorage
-    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    const formData = new FormData();
+    formData.append('image', file);
+    setUploading(true);
 
-    const config = {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        // 2. ADD THIS LINE:
-        Authorization: `Bearer ${userInfo.token}`, 
-      },
-    };
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || 'null');
+      if (!userInfo?.token) throw new Error('Sign in as an admin before uploading.');
 
-    // 3. Make sure this points to port 5000 (or uses your proxy)
-    const { data } = await API.post('/api/upload', formData, config);
-    
-    // Handle both string and object responses from backend
-    let imagePath = data;
-    if (typeof data === 'object' && data.url) {
-      imagePath = data.url;
+      const { data } = await API.post('/api/upload', formData, {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+      });
+      const imagePath = typeof data === 'string' ? data : data?.image || data?.url || data?.path;
+      if (!imagePath) throw new Error('The image service returned no image URL.');
+      setImage(getImageUrl(imagePath));
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || error.message || 'Image upload failed.');
+    } finally {
+      setUploading(false);
     }
-    if (typeof imagePath === 'string') {
-      const imageUrl = imagePath.startsWith('http') ? imagePath : `${window.location.origin}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
-      setImage(imageUrl);
-    } else {
-      setImage('');
-    }
-    setUploading(false);
-    toast.success('Image uploaded successfully');
-  } catch (error) {
-    console.error(error);
-    setUploading(false);
-    toast.error('Upload failed: Ensure you are logged in as admin');
-  }
-};
+  };
 
 // const uploadFileHandler = async (e) => {
 //   const file = e.target.files[0]; // Gets the file from your computer
@@ -98,7 +85,7 @@ const ProductCreateScreen = () => {
       };
 
       await API.post('/api/products', {
-        name, price, image, brand, category, countInStock, description, sizes
+        name, price, image, brand, category, countInStock, description, sizes, colors
       }, config);
 
       toast.success('Product Created Successfully');
@@ -106,7 +93,7 @@ const ProductCreateScreen = () => {
         navigate('/admin/productlist');
       }, 1200);
     } catch (err) {
-      toast.error(err.response?.data.message || err.error);
+      toast.error(err.response?.data?.message || err.message || 'Product creation failed.');
     }
   };
 
@@ -144,10 +131,23 @@ const ProductCreateScreen = () => {
               <div className="form-text">Hold Ctrl (Windows) or Cmd (Mac) to select multiple sizes.</div>
             </Form.Group>
 
+            <Form.Group controlId='colors' className='mb-3'>
+              <Form.Label>Colors</Form.Label>
+              <Form.Select multiple value={colors} onChange={(e) => {
+                setColors(Array.from(e.target.selectedOptions, (option) => option.value));
+              }}>
+                {['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Purple', 'Orange', 'Brown', 'Gray', 'Other'].map((color) => (
+                  <option key={color} value={color}>{color}</option>
+                ))}
+              </Form.Select>
+              <div className="form-text">Hold Ctrl (Windows) or Cmd (Mac) to select multiple colors.</div>
+            </Form.Group>
+
             <Form.Group controlId='image' className='mb-3'>
               <Form.Label>Image URL or Upload</Form.Label>
               <Form.Control type='text' placeholder='Enter image url' value={image} onChange={(e) => setImage(e.target.value)} />
-              <Form.Control type='file' label='Choose File' onChange={uploadFileHandler} className='mt-2' />
+              <Form.Control type='file' accept="image/jpeg,image/png,image/webp" onChange={uploadFileHandler} className='mt-2' />
+              {image && <img className="admin-image-preview" src={getImageUrl(image)} alt="Product preview" />}
               {uploading && <p>Uploading...</p>}
             </Form.Group>
 
@@ -171,7 +171,7 @@ const ProductCreateScreen = () => {
               <Form.Control as='textarea' rows={3} placeholder='Enter description' value={description} onChange={(e) => setDescription(e.target.value)} required />
             </Form.Group>
 
-            <Button type='submit' variant='primary'>Create Product</Button>
+            <Button type='submit' variant='primary' disabled={uploading}>Create Product</Button>
           </Form>
         </Col>
       </Row>

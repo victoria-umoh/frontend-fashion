@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import API from '../api';
 import { Link, useNavigate } from 'react-router-dom';
 import { Form, Button, Row, Col, Container, Card, Alert } from 'react-bootstrap';
+import { loadProfile } from '../auth';
+import { requireSupabase } from '../supabase';
 
 const RegisterScreen = () => {
   const [name, setName] = useState('');
@@ -26,13 +27,28 @@ const RegisterScreen = () => {
       setMessage('Passwords do not match');
     } else {
       setMessage(null);
+      setError(null);
       try {
-        const config = { headers: { 'Content-Type': 'application/json' } };
-        const { data } = await API.post('/api/auth/register', { name, email, password }, config);
-        localStorage.setItem('userInfo', JSON.stringify(data));
-        navigate('/');
+        const { data, error: signupError } = await requireSupabase().auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: { name: name.trim() },
+            emailRedirectTo: `${window.location.origin}/verify-email`,
+          },
+        });
+        if (signupError) throw signupError;
+        if (data.session) {
+          const profile = await loadProfile(data.session);
+          localStorage.setItem('userInfo', JSON.stringify(profile));
+          navigate('/');
+        } else {
+          navigate(`/verify-email?email=${encodeURIComponent(email.trim())}`, {
+            state: { notice: 'Check your email to verify your account.' },
+          });
+        }
       } catch (err) {
-        setError(err.response && err.response.data.message ? err.response.data.message : err.message);
+        setError(err.message || 'Unable to create your account.');
       }
     }
   };
@@ -41,12 +57,13 @@ const RegisterScreen = () => {
     <Container>
       <Row className="justify-content-md-center mt-5">
         <Col xs={12} md={6}>
-          <Card className="shadow-sm p-4">
+          <Card className="auth-card p-4">
             <Card.Body>
               <h1 className="text-center mb-4">Sign Up</h1>
               
               {message && <Alert variant="danger">{message}</Alert>}
               {error && <Alert variant="danger">{error}</Alert>}
+              {error && <div className="mb-3"><Link to={`/verify-email?email=${encodeURIComponent(email)}`}>Resend verification email</Link></div>}
 
               <Form onSubmit={submitHandler}>
                 <Form.Group className="mb-3" controlId="name">

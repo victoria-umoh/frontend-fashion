@@ -3,33 +3,53 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  // Initialize cart from localStorage if it exists
   const [cartItems, setCartItems] = useState(() => {
-    const savedCart = localStorage.getItem('cartItems');
-    return savedCart ? JSON.parse(savedCart) : [];
+    try {
+      const savedCart = JSON.parse(localStorage.getItem('cartItems') || '[]');
+      return Array.isArray(savedCart) ? savedCart : [];
+    } catch {
+      localStorage.removeItem('cartItems');
+      return [];
+    }
   });
 
-  // Save to localStorage whenever cartItems changes
   useEffect(() => {
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
   }, [cartItems]);
 
   const addToCart = (product, qty = 1) => {
     setCartItems((prevItems) => {
-      const existItem = prevItems.find((x) => x._id === product._id);
+      const maxQty = Number(product.countInStock);
+      if (Number.isFinite(maxQty) && maxQty <= 0) return prevItems;
 
-      if (existItem) {
-        return prevItems.map((x) =>
-          x._id === existItem._id ? { ...x, qty: x.qty + qty } : x
+      const existingItem = prevItems.find(
+        (item) => item._id === product._id
+          && (item.size || '') === (product.size || '')
+          && (item.color || '') === (product.color || '')
+      );
+      const nextQty = Math.max(1, (existingItem?.qty || 0) + qty);
+      const boundedQty = maxQty > 0 ? Math.min(nextQty, maxQty) : nextQty;
+
+      if (existingItem) {
+        return prevItems.map((item) =>
+          item._id === product._id
+            && (item.size || '') === (product.size || '')
+            && (item.color || '') === (product.color || '')
+            ? { ...item, qty: boundedQty }
+            : item
         );
       } else {
-        return [...prevItems, { ...product, qty }];
+        return [...prevItems, { ...product, qty: boundedQty }];
       }
     });
   };
 
-  const removeFromCart = (id) => {
-    setCartItems(cartItems.filter((x) => x._id !== id));
+  const removeFromCart = (id, size = '', color = '') => {
+    setCartItems((items) => items.filter(
+      (item) => item._id !== id
+        || (item.size || '') !== size
+        || (item.color || '') !== color
+    ));
   };
 
   const clearCart = () => {
@@ -37,7 +57,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const loadCart = (items) => {
-    setCartItems(items);
+    setCartItems(Array.isArray(items) ? items : []);
   };
 
   return (
